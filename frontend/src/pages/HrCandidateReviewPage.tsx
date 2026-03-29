@@ -45,7 +45,7 @@ export default function HrCandidateReviewPage() {
   };
 
   if (loading) return <p className="text-gray-500">Загрузка...</p>;
-  if (!analysis) return <p className="text-red-500">Кандидат не найден</p>;
+  if (!analysis) return <p className="text-red-500">Абитуриент не найден</p>;
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -129,12 +129,12 @@ export default function HrCandidateReviewPage() {
           disabled={sending}
           className="w-full bg-primary-600 text-white py-3 rounded-lg text-lg hover:bg-primary-700 disabled:opacity-50"
         >
-          {sending ? "Отправка..." : "Отправить руководителю"}
+          {sending ? "Отправка..." : "Отправить в комиссию"}
         </button>
       )}
       {analysis.status === "sent_to_manager" && (
         <div className="text-center py-3 bg-blue-50 text-blue-700 rounded-lg">
-          Отправлен руководителю на рассмотрение
+          Отправлен в приёмную комиссию
         </div>
       )}
     </div>

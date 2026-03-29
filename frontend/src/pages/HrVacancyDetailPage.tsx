@@ -50,13 +50,13 @@ export default function HrVacancyDetailPage() {
   }, [id]);
 
   if (loading) return <p className="text-gray-500">Загрузка...</p>;
-  if (!vacancy) return <p className="text-red-500">Вакансия не найдена</p>;
+  if (!vacancy) return <p className="text-red-500">Программа не найдена</p>;
 
   return (
     <div className="max-w-4xl mx-auto">
       <div className="mb-8">
         <Link to="/hr" className="text-primary-600 hover:underline text-sm">
-          &larr; Назад к вакансиям
+          &larr; Назад к программам
         </Link>
       </div>
 
@@ -110,7 +110,7 @@ export default function HrVacancyDetailPage() {
           Кандидаты ({candidates.length})
         </h3>
         {candidates.length === 0 ? (
-          <p className="text-gray-500">Пока нет кандидатов для этой вакансии</p>
+          <p className="text-gray-500">Пока нет абитуриентов для этой программы</p>
         ) : (
           <div className="space-y-3">
             {candidates.map((c) => (

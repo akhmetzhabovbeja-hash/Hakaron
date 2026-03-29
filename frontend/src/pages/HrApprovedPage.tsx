@@ -36,15 +36,15 @@ export default function HrApprovedPage() {
 
   return (
     <div>
-      <h2 className="text-3xl font-bold mb-8">Одобренные кандидаты</h2>
+      <h2 className="text-3xl font-bold mb-8">Зачисленные абитуриенты</h2>
 
       {loading ? (
         <p className="text-gray-500">Загрузка...</p>
       ) : candidates.length === 0 ? (
         <div className="text-center py-20 text-gray-500">
-          <p className="text-lg">Нет одобренных кандидатов</p>
+          <p className="text-lg">Нет зачисленных абитуриентов</p>
           <p className="text-sm mt-1">
-            Руководитель ещё не одобрил ни одного кандидата
+            Приёмная комиссия ещё не зачислила ни одного абитуриента
           </p>
         </div>
       ) : (
@@ -67,7 +67,7 @@ export default function HrApprovedPage() {
                   onClick={() => handleInvite(c.id)}
                   className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700"
                 >
-                  Пригласить
+                  Отправить оффер
                 </button>
               </div>
             </div>

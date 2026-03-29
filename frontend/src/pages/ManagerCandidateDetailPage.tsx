@@ -45,7 +45,7 @@ export default function ManagerCandidateDetailPage() {
   };
 
   if (loading) return <p className="text-gray-500">Загрузка...</p>;
-  if (!analysis) return <p className="text-red-500">Кандидат не найден</p>;
+  if (!analysis) return <p className="text-red-500">Абитуриент не найден</p>;
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -131,25 +131,25 @@ export default function ManagerCandidateDetailPage() {
             disabled={acting}
             className="flex-1 bg-green-600 text-white px-8 py-3 rounded-lg hover:bg-green-700 text-lg disabled:opacity-50"
           >
-            Одобрить
+            Зачислить
           </button>
           <button
             onClick={() => handleAction("reject")}
             disabled={acting}
             className="flex-1 bg-red-100 text-red-600 px-8 py-3 rounded-lg hover:bg-red-200 text-lg disabled:opacity-50"
           >
-            Отклонить
+            Отказать
           </button>
         </div>
       )}
       {analysis.status === "approved" && (
         <div className="text-center py-3 bg-green-50 text-green-700 rounded-lg text-lg">
-          Кандидат одобрен
+          Абитуриент зачислен
         </div>
       )}
       {analysis.status === "rejected" && (
         <div className="text-center py-3 bg-red-50 text-red-700 rounded-lg text-lg">
-          Кандидат отклонён
+          Абитуриент не прошёл отбор
         </div>
       )}
     </div>

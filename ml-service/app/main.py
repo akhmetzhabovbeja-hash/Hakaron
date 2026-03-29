@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 
 from app.api.analyze import router as analyze_router
+from app.api.ai_detection import router as ai_detection_router
 
 app = FastAPI(
     title="Hakaron ML Service",
@@ -9,6 +10,7 @@ app = FastAPI(
 )
 
 app.include_router(analyze_router, prefix="/api/v1")
+app.include_router(ai_detection_router, prefix="/api/v1")
 
 
 @app.get("/health")

@@ -33,15 +33,15 @@ export default function ManagerDashboardPage() {
 
   return (
     <div>
-      <h2 className="text-3xl font-bold mb-8">Панель руководителя</h2>
+      <h2 className="text-3xl font-bold mb-8">Приёмная комиссия</h2>
 
       {loading ? (
         <p className="text-gray-500">Загрузка...</p>
       ) : candidates.length === 0 ? (
         <div className="text-center py-20 text-gray-500">
-          <p className="text-lg">Нет кандидатов на рассмотрение</p>
+          <p className="text-lg">Нет абитуриентов на рассмотрение</p>
           <p className="text-sm mt-1">
-            HR-отдел пока не отправил кандидатов для вашего одобрения
+            Координатор отбора пока не отправил абитуриентов
           </p>
         </div>
       ) : (

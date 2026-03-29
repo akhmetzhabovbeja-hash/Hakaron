@@ -13,9 +13,9 @@ interface ProfileData {
 }
 
 const roleLabels: Record<string, string> = {
-  candidate: "Кандидат",
-  manager: "Руководитель",
-  hr: "HR",
+  candidate: "Абитуриент",
+  manager: "Приёмная комиссия",
+  hr: "Координатор отбора",
 };
 
 export default function ProfilePage() {

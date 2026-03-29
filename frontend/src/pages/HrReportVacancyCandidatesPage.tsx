@@ -60,14 +60,14 @@ export default function HrReportVacancyCandidatesPage() {
 
       <h2 className="text-3xl font-bold mt-4 mb-2">{vacancyTitle}</h2>
       <p className="text-gray-600 mb-8">
-        Кандидаты: {candidates.length}
+        Абитуриенты: {candidates.length}
       </p>
 
       {loading ? (
         <p className="text-gray-500">Загрузка...</p>
       ) : candidates.length === 0 ? (
         <div className="text-center py-20 text-gray-500">
-          <p className="text-lg">Пока нет кандидатов</p>
+          <p className="text-lg">Пока нет абитуриентов</p>
         </div>
       ) : (
         <div className="grid gap-3">

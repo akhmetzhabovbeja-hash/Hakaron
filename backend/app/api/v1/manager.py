@@ -93,10 +93,12 @@ async def get_analysis(
         total_score=analysis.total_score,
         vacancy_match=analysis.vacancy_match,
         growth_potential=analysis.growth_potential,
+        growth_path_score=analysis.growth_path_score,
         strengths=analysis.strengths,
         weaknesses=analysis.weaknesses,
         summary=analysis.summary,
         status=analysis.status.value,
+        ai_detection_flags=analysis.ai_detection_flags or [],
     )
 
 

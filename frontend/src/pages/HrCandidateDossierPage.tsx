@@ -48,7 +48,7 @@ export default function HrCandidateDossierPage() {
         &larr; Назад к анализу
       </Link>
 
-      <h2 className="text-3xl font-bold mt-4 mb-6">Досье кандидата</h2>
+      <h2 className="text-3xl font-bold mt-4 mb-6">Досье абитуриента</h2>
 
       {/* User Info Card */}
       <div className="bg-white rounded-xl shadow p-6 mb-6">
@@ -90,7 +90,7 @@ export default function HrCandidateDossierPage() {
       {/* AI Score Summary (compact) */}
       <div className="bg-white rounded-xl shadow p-6 mb-6">
         <h3 className="font-semibold mb-4">AI-оценка</h3>
-        <div className="grid grid-cols-3 gap-4 mb-4">
+        <div className="grid grid-cols-4 gap-4 mb-4">
           <div className="text-center">
             <div
               className={`text-2xl font-bold ${
@@ -117,6 +117,12 @@ export default function HrCandidateDossierPage() {
             </div>
             <div className="text-xs text-gray-400">Потенциал</div>
           </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-teal-600">
+              {Math.round((dossier as any).growth_path_score * 100 || 0)}%
+            </div>
+            <div className="text-xs text-gray-400">Траектория роста</div>
+          </div>
         </div>
         <p className="text-gray-600 text-sm">{dossier.summary}</p>
       </div>
@@ -124,29 +130,50 @@ export default function HrCandidateDossierPage() {
       {/* Answers */}
       <div className="bg-white rounded-xl shadow p-6">
         <h3 className="font-semibold mb-4">
-          Ответы кандидата ({dossier.answers.length})
+          Ответы абитуриента ({dossier.answers.length})
         </h3>
         <div className="space-y-4">
-          {dossier.answers.map((a) => (
-            <div
-              key={a.question_number}
-              className="border border-gray-200 rounded-lg p-4"
-            >
-              <div className="flex items-start gap-3 mb-2">
-                <span className="bg-primary-100 text-primary-700 text-xs font-bold px-2 py-1 rounded shrink-0">
-                  #{a.question_number}
-                </span>
-                <p className="text-sm font-medium text-gray-800">
-                  {a.question_text}
-                </p>
+          {dossier.answers.map((a) => {
+            const aiFlag = ((dossier as any).ai_detection_flags || []).find(
+              (f: any) => f.question_number === a.question_number
+            );
+            return (
+              <div
+                key={a.question_number}
+                className={`border rounded-lg p-4 ${
+                  aiFlag?.is_ai_generated
+                    ? "border-orange-300 bg-orange-50"
+                    : "border-gray-200"
+                }`}
+              >
+                <div className="flex items-start gap-3 mb-2">
+                  <span className="bg-primary-100 text-primary-700 text-xs font-bold px-2 py-1 rounded shrink-0">
+                    #{a.question_number}
+                  </span>
+                  <p className="text-sm font-medium text-gray-800 flex-1">
+                    {a.question_text}
+                  </p>
+                  {aiFlag && (
+                    <span
+                      className={`text-xs px-2 py-1 rounded shrink-0 ${
+                        aiFlag.is_ai_generated
+                          ? "bg-orange-200 text-orange-800"
+                          : "bg-yellow-100 text-yellow-700"
+                      }`}
+                      title={`AI probability: ${Math.round(aiFlag.ai_probability * 100)}%\nIndicators: ${aiFlag.indicators?.join(", ")}`}
+                    >
+                      {aiFlag.is_ai_generated ? "AI-текст" : `AI ${Math.round(aiFlag.ai_probability * 100)}%`}
+                    </span>
+                  )}
+                </div>
+                <div className="ml-9 bg-gray-50 rounded-lg p-3">
+                  <p className="text-gray-700 text-sm whitespace-pre-wrap">
+                    {a.answer_text}
+                  </p>
+                </div>
               </div>
-              <div className="ml-9 bg-gray-50 rounded-lg p-3">
-                <p className="text-gray-700 text-sm whitespace-pre-wrap">
-                  {a.answer_text}
-                </p>
-              </div>
-            </div>
-          ))}
+            );
+          })}
           {dossier.answers.length === 0 && (
             <p className="text-gray-500 text-center py-4">
               Ответы не найдены

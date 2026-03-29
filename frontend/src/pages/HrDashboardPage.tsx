@@ -24,12 +24,12 @@ export default function HrDashboardPage() {
   return (
     <div>
       <div className="flex justify-between items-center mb-8">
-        <h2 className="text-3xl font-bold">HR: Вакансии</h2>
+        <h2 className="text-3xl font-bold">Координатор: Программы</h2>
         <Link
           to="/hr/vacancies/create"
           className="bg-primary-600 text-white px-6 py-2 rounded-lg hover:bg-primary-700"
         >
-          + Создать вакансию
+          + Создать программу
         </Link>
       </div>
 
@@ -37,8 +37,8 @@ export default function HrDashboardPage() {
         <p className="text-gray-500">Загрузка...</p>
       ) : vacancies.length === 0 ? (
         <div className="text-center py-20 text-gray-500">
-          <p className="text-lg mb-2">Вакансий пока нет</p>
-          <p>Создайте первую вакансию и добавьте к ней вопросы</p>
+          <p className="text-lg mb-2">Программ пока нет</p>
+          <p>Создайте первую программу и добавьте к ней вопросы</p>
         </div>
       ) : (
         <div className="grid gap-4">
@@ -97,7 +97,7 @@ function HrAnalyzedCandidates() {
   return (
     <div className="mt-10">
       <h3 className="text-2xl font-bold mb-4">
-        Кандидаты после AI-анализа ({candidates.length})
+        Абитуриенты после AI-анализа ({candidates.length})
       </h3>
       <div className="grid gap-3">
         {candidates.map((c) => (

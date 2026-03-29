@@ -264,10 +264,12 @@ async def get_candidate_analysis(
         total_score=analysis.total_score,
         vacancy_match=analysis.vacancy_match,
         growth_potential=analysis.growth_potential,
+        growth_path_score=analysis.growth_path_score,
         strengths=analysis.strengths or [],
         weaknesses=analysis.weaknesses or [],
         summary=analysis.summary,
         status=analysis.status.value,
+        ai_detection_flags=analysis.ai_detection_flags or [],
     )
 
 
@@ -461,11 +463,13 @@ async def get_candidate_dossier(
         total_score=analysis.total_score,
         vacancy_match=analysis.vacancy_match,
         growth_potential=analysis.growth_potential,
+        growth_path_score=analysis.growth_path_score,
         strengths=analysis.strengths or [],
         weaknesses=analysis.weaknesses or [],
         summary=analysis.summary,
         status=analysis.status.value,
         vacancy_title=vacancy.title,
+        ai_detection_flags=analysis.ai_detection_flags or [],
         answers=[
             AnswerItem(
                 question_number=a.question_number,

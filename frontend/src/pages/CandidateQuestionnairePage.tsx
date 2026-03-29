@@ -27,7 +27,7 @@ export default function CandidateQuestionnairePage() {
         setVacancyTitle(res.data.title);
         setQuestions(res.data.questions || []);
       })
-      .catch(() => setError("Не удалось загрузить вакансию"))
+      .catch(() => setError("Не удалось загрузить программу"))
       .finally(() => setLoading(false));
   }, [vacancyId]);
 
@@ -79,7 +79,7 @@ export default function CandidateQuestionnairePage() {
     return (
       <div className="text-center py-20">
         <p className="text-gray-500 text-lg">
-          Для этой вакансии ещё нет вопросов
+          Для этой программы ещё нет вопросов
         </p>
       </div>
     );
@@ -90,7 +90,7 @@ export default function CandidateQuestionnairePage() {
 
   return (
     <div className="max-w-3xl mx-auto">
-      <h2 className="text-3xl font-bold mb-1">Анкета кандидата</h2>
+      <h2 className="text-3xl font-bold mb-1">Анкета абитуриента</h2>
       <p className="text-gray-500 mb-6">{vacancyTitle}</p>
 
       {error && (

@@ -30,34 +30,34 @@ const statusConfig: Record<
     label: "На рассмотрении HR",
     color: "bg-yellow-100 text-yellow-700",
     description:
-      "Анализ завершён. HR-специалист рассматривает вашу кандидатуру.",
+      "Анализ завершён. Координатор отбора рассматривает вашу заявку.",
   },
   hr_review: {
     icon: "\uD83D\uDD0D",
     label: "На рассмотрении HR",
     color: "bg-yellow-100 text-yellow-700",
-    description: "HR-специалист рассматривает вашу кандидатуру.",
+    description: "Координатор отбора рассматривает вашу заявку.",
   },
   sent_to_manager: {
     icon: "\uD83D\uDCE8",
     label: "У руководителя",
     color: "bg-indigo-100 text-indigo-700",
     description:
-      "Ваша кандидатура отправлена руководителю на финальное решение.",
+      "Ваша заявка отправлена приёмной комиссии на финальное решение.",
   },
   approved: {
     icon: "\u2705",
-    label: "Одобрен!",
+    label: "Зачислен!",
     color: "bg-green-100 text-green-700",
     description:
-      "Поздравляем! Ваша кандидатура одобрена. HR свяжется с вами в ближайшее время.",
+      "Поздравляем! Вы зачислены в программу! Координатор отбора свяжется с вами.",
   },
   rejected: {
     icon: "\u274C",
     label: "Отклонён",
     color: "bg-red-100 text-red-700",
     description:
-      "К сожалению, в этот раз не получилось. Вы можете попробовать другие вакансии.",
+      "К сожалению, в этот раз не получилось. Вы можете подать заявку на другую программу.",
   },
 };
 
@@ -79,15 +79,15 @@ export default function CandidateStatusPage() {
     return (
       <div className="max-w-2xl mx-auto text-center py-20">
         <div className="text-6xl mb-4">{"\uD83D\uDCCB"}</div>
-        <h2 className="text-2xl font-bold mb-2">Вы ещё не проходили анкету</h2>
+        <h2 className="text-2xl font-bold mb-2">Вы ещё не подавали заявку</h2>
         <p className="text-gray-600 mb-6">
-          Выберите вакансию и пройдите анкетирование
+          Выберите программу и подайте заявку
         </p>
         <Link
           to="/vacancies"
           className="bg-primary-600 text-white px-8 py-3 rounded-lg hover:bg-primary-700"
         >
-          Перейти к вакансиям
+          Перейти к программам
         </Link>
       </div>
     );
@@ -102,7 +102,7 @@ export default function CandidateStatusPage() {
         <div className="text-6xl mb-4">{config.icon}</div>
         <h2 className="text-2xl font-bold mb-2">{config.label}</h2>
         {data.vacancy_title && (
-          <p className="text-gray-500 mb-4">Вакансия: {data.vacancy_title}</p>
+          <p className="text-gray-500 mb-4">Программа: {data.vacancy_title}</p>
         )}
         <p className="text-gray-600 mb-6">{config.description}</p>
 

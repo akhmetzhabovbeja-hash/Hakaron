@@ -47,7 +47,7 @@ export default function HrReportCandidateAnalysisPage() {
   };
 
   if (loading) return <p className="text-gray-500">Загрузка...</p>;
-  if (!analysis) return <p className="text-red-500">Кандидат не найден</p>;
+  if (!analysis) return <p className="text-red-500">Абитуриент не найден</p>;
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -69,7 +69,7 @@ export default function HrReportCandidateAnalysisPage() {
           to={`/hr/reports/candidate/${id}/dossier`}
           className="bg-gray-800 text-white px-5 py-2.5 rounded-lg hover:bg-gray-900 font-medium"
         >
-          Досье кандидата
+          Досье абитуриента
         </Link>
       </div>
 
@@ -147,17 +147,17 @@ export default function HrReportCandidateAnalysisPage() {
             disabled={sending}
             className="flex-1 bg-primary-600 text-white py-3 rounded-lg hover:bg-primary-700 disabled:opacity-50 font-medium"
           >
-            {sending ? "Отправка..." : "Отправить руководителю"}
+            {sending ? "Отправка..." : "Отправить в комиссию"}
           </button>
         )}
         {analysis.status === "sent_to_manager" && (
           <div className="flex-1 text-center py-3 bg-blue-50 text-blue-700 rounded-lg">
-            Отправлен руководителю
+            Отправлен в комиссию
           </div>
         )}
         {analysis.status === "approved" && (
           <div className="flex-1 text-center py-3 bg-green-50 text-green-700 rounded-lg">
-            Одобрен руководителем
+            Зачислен комиссией
           </div>
         )}
         {analysis.status === "rejected" && (

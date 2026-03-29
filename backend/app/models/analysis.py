@@ -26,9 +26,11 @@ class CandidateAnalysis(Base):
     total_score: Mapped[int] = mapped_column(Integer, default=0)
     vacancy_match: Mapped[float] = mapped_column(Float, default=0.0)
     growth_potential: Mapped[str] = mapped_column(Text, default="")
+    growth_path_score: Mapped[float] = mapped_column(Float, default=0.0)
     strengths: Mapped[dict] = mapped_column(JSON, default=list)
     weaknesses: Mapped[dict] = mapped_column(JSON, default=list)
     summary: Mapped[str] = mapped_column(Text, default="")
+    ai_detection_flags: Mapped[dict] = mapped_column(JSON, default=list)
     status: Mapped[AnalysisStatus] = mapped_column(
         Enum(AnalysisStatus), default=AnalysisStatus.PENDING
     )

@@ -12,6 +12,8 @@ class QuestionCategory(str, enum.Enum):
     COMPETENCIES = "competencies"
     MOTIVATION = "motivation"
     POTENTIAL = "potential"
+    LEADERSHIP = "leadership"
+    GROWTH_PATH = "growth_path"
 
 
 class Question(Base):

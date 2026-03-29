@@ -42,16 +42,16 @@ export default function HrReportsPage() {
     <div>
       <h2 className="text-3xl font-bold mb-2">Отчёты</h2>
       <p className="text-gray-600 mb-8">
-        Выберите вакансию для просмотра кандидатов и их анализа
+        Выберите программу для просмотра абитуриентов и их анализа
       </p>
 
       {loading ? (
         <p className="text-gray-500">Загрузка...</p>
       ) : vacancies.length === 0 ? (
         <div className="text-center py-20 text-gray-500">
-          <p className="text-lg">Вакансий пока нет</p>
+          <p className="text-lg">Программ пока нет</p>
           <p className="text-sm mt-1">
-            Создайте вакансию в разделе "Вакансии"
+            Создайте программу в разделе "Программы"
           </p>
         </div>
       ) : (
@@ -72,7 +72,7 @@ export default function HrReportsPage() {
                     <div className="text-2xl font-bold text-primary-600">
                       {v.candidateCount ?? 0}
                     </div>
-                    <div className="text-xs text-gray-400">кандидатов</div>
+                    <div className="text-xs text-gray-400">абитуриентов</div>
                   </div>
                   <span
                     className={`px-3 py-1 rounded-full text-sm ${

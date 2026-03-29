@@ -2,21 +2,21 @@ import { Outlet, Link, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
 
 const roleLabels: Record<string, string> = {
-  candidate: "Кандидат",
-  manager: "Руководитель",
-  hr: "HR",
+  candidate: "Абитуриент",
+  manager: "Приёмная комиссия",
+  hr: "Координатор отбора",
 };
 
 const roleNav: Record<string, { to: string; label: string }[]> = {
   candidate: [
-    { to: "/vacancies", label: "Вакансии" },
+    { to: "/vacancies", label: "Программы" },
     { to: "/status", label: "Мой статус" },
   ],
   manager: [
     { to: "/manager", label: "Дашборд" },
   ],
   hr: [
-    { to: "/hr", label: "Вакансии" },
+    { to: "/hr", label: "Программы" },
     { to: "/hr/reports", label: "Отчёты" },
     { to: "/hr/approved", label: "Одобренные" },
   ],
@@ -37,7 +37,7 @@ export default function MainLayout() {
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-8">
             <Link to="/" className="text-2xl font-bold text-primary-600">
-              Hakaron
+              inVision U
             </Link>
 
             {/* Role-based navigation */}

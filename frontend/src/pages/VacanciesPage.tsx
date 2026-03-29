@@ -24,16 +24,16 @@ export default function VacanciesPage() {
 
   return (
     <div>
-      <h2 className="text-3xl font-bold mb-2">Вакансии</h2>
+      <h2 className="text-3xl font-bold mb-2">Программы</h2>
       <p className="text-gray-600 mb-8">
-        Выберите вакансию и пройдите анкетирование
+        Выберите программу и подайте заявку
       </p>
 
       {loading ? (
         <p className="text-gray-500">Загрузка...</p>
       ) : vacancies.length === 0 ? (
         <div className="text-center py-20 text-gray-500">
-          <p className="text-lg">Вакансий пока нет</p>
+          <p className="text-lg">Программ пока нет</p>
           <p className="text-sm mt-1">Загляните позже</p>
         </div>
       ) : (
@@ -50,7 +50,7 @@ export default function VacanciesPage() {
                   <p className="text-gray-500 mt-1">{v.description}</p>
                 </div>
                 <span className="text-primary-600 font-medium whitespace-nowrap ml-4">
-                  Пройти анкету &rarr;
+                  Подать заявку &rarr;
                 </span>
               </div>
             </Link>

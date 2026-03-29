@@ -14,6 +14,8 @@ const categoryLabels: Record<string, string> = {
   competencies: "Компетенции",
   motivation: "Мотивация",
   potential: "Потенциал",
+  leadership: "Лидерство",
+  growth_path: "Траектория роста",
 };
 
 export default function HrVacancyCreatePage() {
@@ -76,7 +78,7 @@ export default function HrVacancyCreatePage() {
       });
       navigate(`/hr/vacancies/${vacancy.id}`);
     } catch {
-      setError("Ошибка создания вакансии");
+      setError("Ошибка создания программы");
     } finally {
       setLoading(false);
     }
@@ -94,7 +96,7 @@ export default function HrVacancyCreatePage() {
 
   return (
     <div className="max-w-4xl mx-auto">
-      <h2 className="text-3xl font-bold mb-8">Создание вакансии</h2>
+      <h2 className="text-3xl font-bold mb-8">Создание программы</h2>
 
       <form onSubmit={handleSubmit} className="space-y-8">
         {error && (
@@ -108,7 +110,7 @@ export default function HrVacancyCreatePage() {
           <h3 className="text-lg font-semibold">Основная информация</h3>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Название вакансии
+              Название программы
             </label>
             <input
               type="text"
@@ -127,7 +129,7 @@ export default function HrVacancyCreatePage() {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               className="w-full border rounded-lg px-4 py-2 h-24 focus:ring-2 focus:ring-primary-500"
-              placeholder="Описание вакансии..."
+              placeholder="Описание программы..."
               required
             />
           </div>
@@ -139,7 +141,7 @@ export default function HrVacancyCreatePage() {
               value={requirements}
               onChange={(e) => setRequirements(e.target.value)}
               className="w-full border rounded-lg px-4 py-2 h-20 focus:ring-2 focus:ring-primary-500"
-              placeholder="Требования к кандидату..."
+              placeholder="Критерии отбора..."
             />
           </div>
         </div>
@@ -207,6 +209,8 @@ export default function HrVacancyCreatePage() {
                 <option value="competencies">Компетенции</option>
                 <option value="motivation">Мотивация</option>
                 <option value="potential">Потенциал</option>
+                <option value="leadership">Лидерство</option>
+                <option value="growth_path">Траектория роста</option>
               </select>
               <button
                 type="button"
@@ -224,7 +228,7 @@ export default function HrVacancyCreatePage() {
           disabled={loading}
           className="w-full bg-primary-600 text-white py-3 rounded-lg text-lg hover:bg-primary-700 disabled:opacity-50"
         >
-          {loading ? "Создание..." : "Создать вакансию"}
+          {loading ? "Создание..." : "Создать программу"}
         </button>
       </form>
     </div>

@@ -3,8 +3,11 @@ export type UserRole = "candidate" | "manager" | "hr";
 export interface User {
   id: number;
   email: string;
+  phone: string;
   name: string;
   role: UserRole;
+  bio: string;
+  avatar_url: string | null;
 }
 
 export interface Vacancy {

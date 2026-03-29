@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import JWTError
-from sqlalchemy import select
+from sqlalchemy import select, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -33,13 +33,20 @@ async def get_current_user(
 
 @router.post("/register", response_model=TokenResponse)
 async def register(data: RegisterRequest, db: AsyncSession = Depends(get_db)):
-    existing = await db.execute(select(User).where(User.email == data.email))
-    if existing.scalar_one_or_none():
+    # Check email uniqueness
+    existing_email = await db.execute(select(User).where(User.email == data.email))
+    if existing_email.scalar_one_or_none():
         raise HTTPException(status_code=400, detail="Email already registered")
 
-    # Registration always creates a candidate — role is forced
+    # Check phone uniqueness
+    existing_phone = await db.execute(select(User).where(User.phone == data.phone))
+    if existing_phone.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="Phone number already registered")
+
+    # Registration always creates a candidate
     user = User(
         email=data.email,
+        phone=data.phone,
         name=data.name,
         hashed_password=hash_password(data.password),
         role=UserRole.CANDIDATE,

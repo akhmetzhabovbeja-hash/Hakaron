@@ -1,8 +1,9 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 
 
 class RegisterRequest(BaseModel):
     email: str
+    phone: str
     name: str
     password: str
 
@@ -21,7 +22,10 @@ class TokenResponse(BaseModel):
 class UserResponse(BaseModel):
     id: int
     email: str
+    phone: str
     name: str
     role: str
+    bio: str = ""
+    avatar_url: str | None = None
 
     model_config = {"from_attributes": True}

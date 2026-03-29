@@ -116,6 +116,7 @@ function RegisterForm() {
   const { register, getDefaultRoute } = useAuthStore();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -131,7 +132,7 @@ function RegisterForm() {
 
     setLoading(true);
     try {
-      await register(name, email, password);
+      await register(name, email, phone, password);
       navigate(getDefaultRoute());
     } catch (err: unknown) {
       const msg =
@@ -173,6 +174,19 @@ function RegisterForm() {
           onChange={(e) => setEmail(e.target.value)}
           className="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
           placeholder="email@example.com"
+          required
+        />
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Номер телефона
+        </label>
+        <input
+          type="tel"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          className="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+          placeholder="+7 (999) 123-45-67"
           required
         />
       </div>

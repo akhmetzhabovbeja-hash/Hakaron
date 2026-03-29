@@ -48,3 +48,29 @@ class MyStatusResponse(BaseModel):
     status: str | None = None
     vacancy_title: str | None = None
     total_score: int | None = None
+
+
+class AnswerItem(BaseModel):
+    question_number: int
+    question_text: str
+    answer_text: str
+
+
+class CandidateDossierResponse(BaseModel):
+    # User info
+    name: str
+    email: str
+    phone: str
+    bio: str
+    avatar_url: str | None = None
+    # Analysis
+    total_score: int
+    vacancy_match: float
+    growth_potential: str
+    strengths: list[str]
+    weaknesses: list[str]
+    summary: str
+    status: str
+    vacancy_title: str
+    # Answers
+    answers: list[AnswerItem]

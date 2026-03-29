@@ -13,7 +13,12 @@ import HrDashboardPage from "./pages/HrDashboardPage";
 import HrVacancyCreatePage from "./pages/HrVacancyCreatePage";
 import HrVacancyDetailPage from "./pages/HrVacancyDetailPage";
 import HrCandidateReviewPage from "./pages/HrCandidateReviewPage";
+import ProfilePage from "./pages/ProfilePage";
 import HrApprovedPage from "./pages/HrApprovedPage";
+import HrReportsPage from "./pages/HrReportsPage";
+import HrReportVacancyCandidatesPage from "./pages/HrReportVacancyCandidatesPage";
+import HrReportCandidateAnalysisPage from "./pages/HrReportCandidateAnalysisPage";
+import HrCandidateDossierPage from "./pages/HrCandidateDossierPage";
 
 function RootRedirect() {
   const { isAuthenticated, isLoading, getDefaultRoute } = useAuthStore();
@@ -39,6 +44,16 @@ function App() {
 
       <Route path="/" element={<MainLayout />}>
         <Route index element={<RootRedirect />} />
+
+        {/* Profile (all authenticated users) */}
+        <Route
+          path="profile"
+          element={
+            <ProtectedRoute>
+              <ProfilePage />
+            </ProtectedRoute>
+          }
+        />
 
         {/* Candidate routes */}
         <Route
@@ -122,6 +137,40 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={["hr"]}>
               <HrApprovedPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* HR Reports routes */}
+        <Route
+          path="hr/reports"
+          element={
+            <ProtectedRoute allowedRoles={["hr"]}>
+              <HrReportsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="hr/reports/vacancy/:id"
+          element={
+            <ProtectedRoute allowedRoles={["hr"]}>
+              <HrReportVacancyCandidatesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="hr/reports/candidate/:id"
+          element={
+            <ProtectedRoute allowedRoles={["hr"]}>
+              <HrReportCandidateAnalysisPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="hr/reports/candidate/:id/dossier"
+          element={
+            <ProtectedRoute allowedRoles={["hr"]}>
+              <HrCandidateDossierPage />
             </ProtectedRoute>
           }
         />

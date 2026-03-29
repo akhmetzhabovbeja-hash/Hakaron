@@ -14,7 +14,8 @@ from app.models.candidate import CandidateProfile
 from app.models.analysis import CandidateAnalysis, AnalysisStatus
 from app.schemas.vacancy import VacancyCreate, VacancyResponse, VacancyDetailResponse, QuestionInVacancy
 from app.schemas.question import QuestionResponse, QuestionCreate, VacancyQuestionAssign
-from app.schemas.candidate import CandidateListResponse, CandidateAnalysisResponse
+from app.models.questionnaire import QuestionnaireResponse
+from app.schemas.candidate import CandidateListResponse, CandidateAnalysisResponse, CandidateDossierResponse, AnswerItem
 
 router = APIRouter()
 
@@ -364,3 +365,113 @@ async def invite_candidate(
         )
 
     return {"message": "Invitation sent successfully", "analysis_id": analysis_id}
+
+
+# ---------------------------------------------------------------------------
+# Candidates per vacancy (all statuses)
+# ---------------------------------------------------------------------------
+
+
+@router.get("/vacancies/{vacancy_id}/candidates", response_model=list[CandidateListResponse])
+async def list_vacancy_candidates(
+    vacancy_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """List ALL candidates for a specific vacancy (all statuses)."""
+    _require_hr(current_user)
+
+    # Verify vacancy exists
+    vac_result = await db.execute(select(Vacancy).where(Vacancy.id == vacancy_id))
+    if not vac_result.scalar_one_or_none():
+        raise HTTPException(status_code=404, detail="Vacancy not found")
+
+    result = await db.execute(
+        select(CandidateAnalysis, CandidateProfile, Vacancy)
+        .join(CandidateProfile, CandidateAnalysis.candidate_id == CandidateProfile.id)
+        .join(Vacancy, CandidateAnalysis.vacancy_id == Vacancy.id)
+        .where(CandidateAnalysis.vacancy_id == vacancy_id)
+        .order_by(CandidateAnalysis.total_score.desc())
+    )
+    rows = result.all()
+
+    return [
+        CandidateListResponse(
+            id=analysis.id,
+            candidate_id=profile.id,
+            full_name=profile.full_name,
+            email=profile.email,
+            vacancy_title=vacancy.title,
+            total_score=analysis.total_score,
+            vacancy_match=analysis.vacancy_match,
+            status=analysis.status.value,
+            source=profile.source.value,
+        )
+        for analysis, profile, vacancy in rows
+    ]
+
+
+# ---------------------------------------------------------------------------
+# Candidate dossier
+# ---------------------------------------------------------------------------
+
+
+@router.get("/candidates/{analysis_id}/dossier", response_model=CandidateDossierResponse)
+async def get_candidate_dossier(
+    analysis_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get full dossier for a candidate including user info and questionnaire answers."""
+    _require_hr(current_user)
+
+    # Get analysis + profile + vacancy
+    result = await db.execute(
+        select(CandidateAnalysis, CandidateProfile, Vacancy)
+        .join(CandidateProfile, CandidateAnalysis.candidate_id == CandidateProfile.id)
+        .join(Vacancy, CandidateAnalysis.vacancy_id == Vacancy.id)
+        .where(CandidateAnalysis.id == analysis_id)
+    )
+    row = result.one_or_none()
+    if not row:
+        raise HTTPException(status_code=404, detail="Analysis not found")
+
+    analysis, profile, vacancy = row
+
+    # Get user info
+    user_result = await db.execute(select(User).where(User.id == profile.user_id))
+    user = user_result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Get questionnaire answers
+    answers_result = await db.execute(
+        select(QuestionnaireResponse)
+        .where(QuestionnaireResponse.candidate_id == profile.id)
+        .order_by(QuestionnaireResponse.question_number)
+    )
+    answers = answers_result.scalars().all()
+
+    return CandidateDossierResponse(
+        name=user.name,
+        email=user.email,
+        phone=user.phone,
+        bio=user.bio,
+        avatar_url=user.avatar_url,
+        total_score=analysis.total_score,
+        vacancy_match=analysis.vacancy_match,
+        growth_potential=analysis.growth_potential,
+        strengths=analysis.strengths or [],
+        weaknesses=analysis.weaknesses or [],
+        summary=analysis.summary,
+        status=analysis.status.value,
+        vacancy_title=vacancy.title,
+        answers=[
+            AnswerItem(
+                question_number=a.question_number,
+                question_text=a.question_text,
+                answer_text=a.answer_text,
+            )
+            for a in answers
+        ],
+    )

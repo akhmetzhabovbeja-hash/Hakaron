@@ -17,6 +17,7 @@ const roleNav: Record<string, { to: string; label: string }[]> = {
   ],
   hr: [
     { to: "/hr", label: "Вакансии" },
+    { to: "/hr/reports", label: "Отчёты" },
     { to: "/hr/approved", label: "Одобренные" },
   ],
 };
@@ -58,12 +59,19 @@ export default function MainLayout() {
           <div className="flex items-center gap-4">
             {isAuthenticated && user ? (
               <>
-                <div className="text-sm text-gray-500">
+                <Link to="/profile" className="text-sm text-gray-500 hover:text-primary-600 flex items-center gap-2">
+                  {user.avatar_url && (
+                    <img
+                      src={`http://localhost:8000${user.avatar_url}`}
+                      alt=""
+                      className="w-7 h-7 rounded-full object-cover"
+                    />
+                  )}
                   <span className="font-medium text-gray-700">{user.name}</span>
-                  <span className="ml-2 px-2 py-0.5 bg-primary-100 text-primary-700 rounded text-xs">
+                  <span className="px-2 py-0.5 bg-primary-100 text-primary-700 rounded text-xs">
                     {roleLabels[user.role] || user.role}
                   </span>
-                </div>
+                </Link>
                 <button
                   onClick={handleLogout}
                   className="text-gray-500 hover:text-red-600 text-sm"

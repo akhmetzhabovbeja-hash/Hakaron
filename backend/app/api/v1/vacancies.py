@@ -54,5 +54,6 @@ async def get_vacancy(vacancy_id: int, db: AsyncSession = Depends(get_db)):
         description=vacancy.description,
         requirements=vacancy.requirements,
         is_active=vacancy.is_active,
+        application_deadline=vacancy.application_deadline,
         questions=questions,
     )

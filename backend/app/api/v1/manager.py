@@ -1,3 +1,4 @@
+from pydantic import BaseModel
 from fastapi import APIRouter, HTTPException, Depends, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,6 +10,10 @@ from app.models.vacancy import Vacancy
 from app.models.candidate import CandidateProfile
 from app.models.analysis import CandidateAnalysis, AnalysisStatus
 from app.schemas.candidate import CandidateListResponse, CandidateAnalysisResponse
+
+
+class ManagerDecisionRequest(BaseModel):
+    comment: str = ""
 
 router = APIRouter()
 
@@ -99,16 +104,19 @@ async def get_analysis(
         summary=analysis.summary,
         status=analysis.status.value,
         ai_detection_flags=analysis.ai_detection_flags or [],
+        category_scores=analysis.category_scores,
+        manager_comment=analysis.manager_comment,
     )
 
 
 @router.post("/candidates/{analysis_id}/approve")
 async def approve_candidate(
     analysis_id: int,
+    body: ManagerDecisionRequest,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Approve a candidate."""
+    """Approve a candidate with optional comment."""
     _require_manager(current_user)
 
     result = await db.execute(
@@ -120,6 +128,8 @@ async def approve_candidate(
 
     analysis.status = AnalysisStatus.APPROVED
     analysis.approved_by = current_user.id
+    if body.comment:
+        analysis.manager_comment = body.comment
     await db.commit()
 
     return {"message": "Candidate approved", "candidate_id": analysis.candidate_id}
@@ -128,10 +138,11 @@ async def approve_candidate(
 @router.post("/candidates/{analysis_id}/reject")
 async def reject_candidate(
     analysis_id: int,
+    body: ManagerDecisionRequest,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Reject a candidate."""
+    """Reject a candidate with optional comment."""
     _require_manager(current_user)
 
     result = await db.execute(
@@ -142,6 +153,8 @@ async def reject_candidate(
         raise HTTPException(status_code=404, detail="Analysis not found")
 
     analysis.status = AnalysisStatus.REJECTED
+    if body.comment:
+        analysis.manager_comment = body.comment
     await db.commit()
 
     return {"message": "Candidate rejected", "candidate_id": analysis.candidate_id}

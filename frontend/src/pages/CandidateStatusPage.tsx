@@ -7,6 +7,7 @@ interface StatusData {
   status: string | null;
   vacancy_title: string | null;
   total_score: number | null;
+  manager_comment: string | null;
 }
 
 const statusConfig: Record<
@@ -115,6 +116,13 @@ export default function CandidateStatusPage() {
         {data.total_score !== null && data.total_score > 0 && status === "approved" && (
           <div className="mt-6 text-gray-500">
             Ваш балл: <span className="font-bold text-green-600">{data.total_score}/100</span>
+          </div>
+        )}
+
+        {data.manager_comment && (status === "approved" || status === "rejected") && (
+          <div className="mt-6 text-left bg-gray-50 rounded-lg p-4">
+            <p className="text-sm text-gray-500 mb-1">Комментарий приёмной комиссии:</p>
+            <p className="text-gray-700">{data.manager_comment}</p>
           </div>
         )}
       </div>

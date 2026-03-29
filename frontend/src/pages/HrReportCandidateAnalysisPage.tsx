@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import apiClient from "../api/client";
+import { downloadFile } from "../utils/downloadFile";
+import CategoryScores from "../components/CategoryScores";
 
 interface AnalysisDetail {
   id: number;
@@ -15,11 +17,12 @@ interface AnalysisDetail {
   weaknesses: string[];
   summary: string;
   status: string;
+  category_scores: Record<string, any> | null;
+  manager_comment: string | null;
 }
 
 export default function HrReportCandidateAnalysisPage() {
   const { id } = useParams();
-  const navigate = useNavigate();
   const [analysis, setAnalysis] = useState<AnalysisDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
@@ -67,7 +70,7 @@ export default function HrReportCandidateAnalysisPage() {
         </div>
         <div className="flex gap-2">
           <button
-            onClick={() => window.open(`/api/v1/hr/candidates/${id}/report-pdf`, "_blank")}
+            onClick={() => downloadFile(`/hr/candidates/${id}/report-pdf`, `candidate_${id}.pdf`).catch(() => alert("Ошибка скачивания PDF"))}
             className="bg-red-600 text-white px-4 py-2.5 rounded-lg hover:bg-red-700 font-medium"
           >
             PDF
@@ -135,11 +138,22 @@ export default function HrReportCandidateAnalysisPage() {
         </div>
       </div>
 
+      {/* Explainable AI: category breakdown */}
+      <CategoryScores categoryScores={analysis.category_scores} />
+
       {/* Summary */}
       <div className="bg-white rounded-xl shadow p-5 mb-6">
         <h3 className="font-semibold mb-2">AI-резюме</h3>
         <p className="text-gray-700">{analysis.summary}</p>
       </div>
+
+      {/* Manager comment */}
+      {analysis.manager_comment && (
+        <div className="bg-indigo-50 rounded-xl shadow p-5 mb-6">
+          <h3 className="font-semibold text-indigo-700 mb-2">Комментарий комиссии</h3>
+          <p className="text-gray-700">{analysis.manager_comment}</p>
+        </div>
+      )}
 
       {/* Actions */}
       <div className="flex gap-4">

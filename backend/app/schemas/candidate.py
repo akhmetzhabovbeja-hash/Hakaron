@@ -41,6 +41,8 @@ class CandidateAnalysisResponse(BaseModel):
     summary: str
     status: str
     ai_detection_flags: list[dict] = []
+    category_scores: dict | None = None
+    manager_comment: str | None = None
 
     model_config = {"from_attributes": True}
 
@@ -50,6 +52,7 @@ class MyStatusResponse(BaseModel):
     status: str | None = None
     vacancy_title: str | None = None
     total_score: int | None = None
+    manager_comment: str | None = None
 
 
 class AnswerItem(BaseModel):
@@ -83,5 +86,7 @@ class CandidateDossierResponse(BaseModel):
     status: str
     vacancy_title: str
     ai_detection_flags: list[dict] = []
+    category_scores: dict | None = None
+    manager_comment: str | None = None
     # Answers
     answers: list[AnswerItem]

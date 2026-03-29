@@ -31,6 +31,8 @@ class CandidateAnalysis(Base):
     weaknesses: Mapped[dict] = mapped_column(JSON, default=list)
     summary: Mapped[str] = mapped_column(Text, default="")
     ai_detection_flags: Mapped[dict] = mapped_column(JSON, default=list)
+    category_scores: Mapped[dict | None] = mapped_column(JSON, nullable=True, default=None)
+    manager_comment: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
     status: Mapped[AnalysisStatus] = mapped_column(
         Enum(AnalysisStatus), default=AnalysisStatus.PENDING
     )

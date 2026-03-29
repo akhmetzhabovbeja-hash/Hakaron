@@ -24,7 +24,7 @@ from app.models.question import Question, QuestionCategory
 from app.models.vacancy_question import VacancyQuestion
 from app.models.candidate import CandidateProfile
 from app.models.analysis import CandidateAnalysis, AnalysisStatus
-from app.schemas.vacancy import VacancyCreate, VacancyResponse, VacancyDetailResponse, QuestionInVacancy
+from app.schemas.vacancy import VacancyCreate, VacancyUpdate, VacancyResponse, VacancyDetailResponse, QuestionInVacancy
 from app.schemas.question import QuestionResponse, QuestionCreate, VacancyQuestionAssign
 from app.models.questionnaire import QuestionnaireResponse
 from app.schemas.candidate import CandidateListResponse, CandidateAnalysisResponse, CandidateDossierResponse, AnswerItem
@@ -66,6 +66,7 @@ async def create_vacancy(
         title=data.title,
         description=data.description,
         requirements=data.requirements,
+        application_deadline=data.application_deadline,
         created_by=current_user.id,
     )
     db.add(vacancy)
@@ -113,8 +114,140 @@ async def get_vacancy(
         description=vacancy.description,
         requirements=vacancy.requirements,
         is_active=vacancy.is_active,
+        application_deadline=vacancy.application_deadline,
         questions=questions,
     )
+
+
+@router.put("/vacancies/{vacancy_id}", response_model=VacancyResponse)
+async def update_vacancy(
+    vacancy_id: int,
+    data: VacancyUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Update vacancy fields (HR only)."""
+    _require_hr(current_user)
+    result = await db.execute(select(Vacancy).where(Vacancy.id == vacancy_id))
+    vacancy = result.scalar_one_or_none()
+    if not vacancy:
+        raise HTTPException(status_code=404, detail="Vacancy not found")
+
+    for field in ("title", "description", "requirements", "application_deadline"):
+        value = getattr(data, field, None)
+        if value is not None:
+            setattr(vacancy, field, value)
+
+    await db.commit()
+    await db.refresh(vacancy)
+    return vacancy
+
+
+@router.patch("/vacancies/{vacancy_id}/archive", response_model=VacancyResponse)
+async def archive_vacancy(
+    vacancy_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Soft-delete: set is_active=False (HR only)."""
+    _require_hr(current_user)
+    result = await db.execute(select(Vacancy).where(Vacancy.id == vacancy_id))
+    vacancy = result.scalar_one_or_none()
+    if not vacancy:
+        raise HTTPException(status_code=404, detail="Vacancy not found")
+    vacancy.is_active = False
+    await db.commit()
+    await db.refresh(vacancy)
+    return vacancy
+
+
+@router.patch("/vacancies/{vacancy_id}/restore", response_model=VacancyResponse)
+async def restore_vacancy(
+    vacancy_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Restore archived vacancy (HR only)."""
+    _require_hr(current_user)
+    result = await db.execute(select(Vacancy).where(Vacancy.id == vacancy_id))
+    vacancy = result.scalar_one_or_none()
+    if not vacancy:
+        raise HTTPException(status_code=404, detail="Vacancy not found")
+    vacancy.is_active = True
+    await db.commit()
+    await db.refresh(vacancy)
+    return vacancy
+
+
+# ---------------------------------------------------------------------------
+# Statistics
+# ---------------------------------------------------------------------------
+
+
+@router.get("/statistics")
+async def get_statistics(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Aggregated statistics for HR dashboard."""
+    _require_hr(current_user)
+
+    # All analyses
+    result = await db.execute(
+        select(CandidateAnalysis, Vacancy)
+        .join(Vacancy, CandidateAnalysis.vacancy_id == Vacancy.id)
+    )
+    rows = result.all()
+
+    if not rows:
+        return {
+            "total_candidates": 0, "avg_score": 0, "avg_match": 0,
+            "by_status": {}, "by_vacancy": [], "score_distribution": [],
+            "ai_flags_count": 0,
+        }
+
+    analyses = [a for a, _ in rows]
+
+    total = len(analyses)
+    avg_score = round(sum(a.total_score for a in analyses) / total, 1)
+    avg_match = round(sum(a.vacancy_match for a in analyses) / total, 2)
+
+    # By status
+    by_status: dict[str, int] = {}
+    for a in analyses:
+        by_status[a.status.value] = by_status.get(a.status.value, 0) + 1
+
+    # By vacancy
+    vac_map: dict[int, dict] = {}
+    for a, v in rows:
+        if v.id not in vac_map:
+            vac_map[v.id] = {"title": v.title, "count": 0, "total_score": 0}
+        vac_map[v.id]["count"] += 1
+        vac_map[v.id]["total_score"] += a.total_score
+    by_vacancy = [
+        {"title": d["title"], "count": d["count"], "avg_score": round(d["total_score"] / d["count"], 1)}
+        for d in vac_map.values()
+    ]
+
+    # Score distribution
+    ranges = [(90, 100), (80, 89), (70, 79), (60, 69), (0, 59)]
+    score_distribution = []
+    for lo, hi in ranges:
+        cnt = sum(1 for a in analyses if lo <= a.total_score <= hi)
+        score_distribution.append({"range": f"{lo}-{hi}", "count": cnt})
+
+    # AI flags
+    ai_flags_count = sum(1 for a in analyses if a.ai_detection_flags and len(a.ai_detection_flags) > 0)
+
+    return {
+        "total_candidates": total,
+        "avg_score": avg_score,
+        "avg_match": avg_match,
+        "by_status": by_status,
+        "by_vacancy": by_vacancy,
+        "score_distribution": score_distribution,
+        "ai_flags_count": ai_flags_count,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -282,6 +415,8 @@ async def get_candidate_analysis(
         summary=analysis.summary,
         status=analysis.status.value,
         ai_detection_flags=analysis.ai_detection_flags or [],
+        category_scores=analysis.category_scores,
+        manager_comment=analysis.manager_comment,
     )
 
 
@@ -513,6 +648,8 @@ async def get_candidate_dossier(
         status=analysis.status.value,
         vacancy_title=vacancy.title,
         ai_detection_flags=analysis.ai_detection_flags or [],
+        category_scores=analysis.category_scores,
+        manager_comment=analysis.manager_comment,
         answers=[
             AnswerItem(
                 question_number=a.question_number,

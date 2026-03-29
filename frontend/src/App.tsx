@@ -19,6 +19,7 @@ import HrReportsPage from "./pages/HrReportsPage";
 import HrReportVacancyCandidatesPage from "./pages/HrReportVacancyCandidatesPage";
 import HrReportCandidateAnalysisPage from "./pages/HrReportCandidateAnalysisPage";
 import HrCandidateDossierPage from "./pages/HrCandidateDossierPage";
+import HrStatisticsPage from "./pages/HrStatisticsPage";
 
 function RootRedirect() {
   const { isAuthenticated, isLoading, getDefaultRoute } = useAuthStore();
@@ -137,6 +138,15 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={["hr"]}>
               <HrApprovedPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="hr/statistics"
+          element={
+            <ProtectedRoute allowedRoles={["hr"]}>
+              <HrStatisticsPage />
             </ProtectedRoute>
           }
         />

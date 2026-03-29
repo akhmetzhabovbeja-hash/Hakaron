@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import apiClient from "../api/client";
+import { downloadFile } from "../utils/downloadFile";
 
 interface DossierData {
   name: string;
@@ -51,7 +52,7 @@ export default function HrCandidateDossierPage() {
       <div className="flex items-center justify-between mt-4 mb-6">
         <h2 className="text-3xl font-bold">Досье абитуриента</h2>
         <button
-          onClick={() => window.open(`/api/v1/hr/candidates/${id}/report-pdf`, "_blank")}
+          onClick={() => downloadFile(`/hr/candidates/${id}/report-pdf`, `dossier_${id}.pdf`).catch(() => alert("Ошибка скачивания PDF"))}
           className="bg-red-600 text-white px-5 py-2 rounded-lg hover:bg-red-700 flex items-center gap-2"
         >
           <span>PDF</span> Скачать досье

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import apiClient from "../api/client";
+import CategoryScores from "../components/CategoryScores";
 
 interface AnalysisDetail {
   id: number;
@@ -15,6 +16,8 @@ interface AnalysisDetail {
   weaknesses: string[];
   summary: string;
   status: string;
+  category_scores: Record<string, any> | null;
+  manager_comment: string | null;
 }
 
 export default function ManagerCandidateDetailPage() {
@@ -23,6 +26,7 @@ export default function ManagerCandidateDetailPage() {
   const [analysis, setAnalysis] = useState<AnalysisDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [acting, setActing] = useState(false);
+  const [comment, setComment] = useState("");
 
   useEffect(() => {
     apiClient
@@ -35,7 +39,7 @@ export default function ManagerCandidateDetailPage() {
   const handleAction = async (action: "approve" | "reject") => {
     setActing(true);
     try {
-      await apiClient.post(`/manager/candidates/${id}/${action}`);
+      await apiClient.post(`/manager/candidates/${id}/${action}`, { comment });
       navigate("/manager");
     } catch {
       alert("Ошибка");
@@ -61,11 +65,11 @@ export default function ManagerCandidateDetailPage() {
         {analysis.email} &middot; {analysis.vacancy_title}
       </p>
 
-      <div className="grid grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-3 gap-6 mb-6">
         <div className="bg-white rounded-xl shadow p-6 text-center">
           <div
             className={`text-4xl font-bold ${
-              analysis.total_score >= 85
+              analysis.total_score >= 80
                 ? "text-green-600"
                 : analysis.total_score >= 60
                 ? "text-yellow-600"
@@ -80,17 +84,20 @@ export default function ManagerCandidateDetailPage() {
           <div className="text-4xl font-bold text-primary-600">
             {Math.round(analysis.vacancy_match * 100)}%
           </div>
-          <div className="text-gray-500 mt-1">Соответствие вакансии</div>
+          <div className="text-gray-500 mt-1">Соответствие</div>
         </div>
         <div className="bg-white rounded-xl shadow p-6 text-center">
           <div className="text-4xl font-bold text-purple-600">
             {analysis.growth_potential}
           </div>
-          <div className="text-gray-500 mt-1">Потенциал роста</div>
+          <div className="text-gray-500 mt-1">Потенциал</div>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-6 mb-8">
+      {/* Explainable AI: category breakdown */}
+      <CategoryScores categoryScores={analysis.category_scores} />
+
+      <div className="grid grid-cols-2 gap-6 mb-6">
         <div className="bg-white rounded-xl shadow p-6">
           <h3 className="text-lg font-semibold text-green-700 mb-3">
             Сильные стороны
@@ -119,37 +126,56 @@ export default function ManagerCandidateDetailPage() {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow p-6 mb-8">
+      <div className="bg-white rounded-xl shadow p-6 mb-6">
         <h3 className="text-lg font-semibold mb-3">AI-резюме</h3>
         <p className="text-gray-700">{analysis.summary}</p>
       </div>
 
+      {/* Manager comment + actions */}
       {analysis.status === "sent_to_manager" && (
-        <div className="flex gap-4">
-          <button
-            onClick={() => handleAction("approve")}
-            disabled={acting}
-            className="flex-1 bg-green-600 text-white px-8 py-3 rounded-lg hover:bg-green-700 text-lg disabled:opacity-50"
-          >
-            Зачислить
-          </button>
-          <button
-            onClick={() => handleAction("reject")}
-            disabled={acting}
-            className="flex-1 bg-red-100 text-red-600 px-8 py-3 rounded-lg hover:bg-red-200 text-lg disabled:opacity-50"
-          >
-            Отказать
-          </button>
+        <div className="bg-white rounded-xl shadow p-6 mb-6">
+          <h3 className="text-lg font-semibold mb-3">Комментарий комиссии</h3>
+          <textarea
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            placeholder="Оставьте комментарий для HR и абитуриента (необязательно)..."
+            className="w-full border rounded-lg px-4 py-3 h-24 focus:ring-2 focus:ring-primary-500 mb-4"
+          />
+          <div className="flex gap-4">
+            <button
+              onClick={() => handleAction("approve")}
+              disabled={acting}
+              className="flex-1 bg-green-600 text-white px-8 py-3 rounded-lg hover:bg-green-700 text-lg disabled:opacity-50"
+            >
+              Зачислить
+            </button>
+            <button
+              onClick={() => handleAction("reject")}
+              disabled={acting}
+              className="flex-1 bg-red-100 text-red-600 px-8 py-3 rounded-lg hover:bg-red-200 text-lg disabled:opacity-50"
+            >
+              Отказать
+            </button>
+          </div>
         </div>
       )}
-      {analysis.status === "approved" && (
-        <div className="text-center py-3 bg-green-50 text-green-700 rounded-lg text-lg">
-          Абитуриент зачислен
-        </div>
-      )}
-      {analysis.status === "rejected" && (
-        <div className="text-center py-3 bg-red-50 text-red-700 rounded-lg text-lg">
-          Абитуриент не прошёл отбор
+
+      {/* Show existing comment + status */}
+      {(analysis.status === "approved" || analysis.status === "rejected") && (
+        <div className={`rounded-xl shadow p-6 mb-6 ${
+          analysis.status === "approved" ? "bg-green-50" : "bg-red-50"
+        }`}>
+          <div className={`text-center text-lg font-medium ${
+            analysis.status === "approved" ? "text-green-700" : "text-red-700"
+          }`}>
+            {analysis.status === "approved" ? "Абитуриент зачислен" : "Абитуриент не прошёл отбор"}
+          </div>
+          {analysis.manager_comment && (
+            <div className="mt-3 p-3 bg-white rounded-lg">
+              <p className="text-sm text-gray-500 mb-1">Комментарий комиссии:</p>
+              <p className="text-gray-700">{analysis.manager_comment}</p>
+            </div>
+          )}
         </div>
       )}
     </div>

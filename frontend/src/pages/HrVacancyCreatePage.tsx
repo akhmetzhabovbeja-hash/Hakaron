@@ -27,6 +27,7 @@ export default function HrVacancyCreatePage() {
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [customQuestion, setCustomQuestion] = useState("");
   const [customCategory, setCustomCategory] = useState("experience");
+  const [deadline, setDeadline] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -72,6 +73,7 @@ export default function HrVacancyCreatePage() {
         title,
         description,
         requirements,
+        application_deadline: deadline ? new Date(deadline).toISOString() : null,
       });
       await apiClient.post(`/hr/vacancies/${vacancy.id}/questions`, {
         question_ids: selectedIds,
@@ -143,6 +145,20 @@ export default function HrVacancyCreatePage() {
               className="w-full border rounded-lg px-4 py-2 h-20 focus:ring-2 focus:ring-primary-500"
               placeholder="Критерии отбора..."
             />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Срок приёма заявок
+            </label>
+            <input
+              type="datetime-local"
+              value={deadline}
+              onChange={(e) => setDeadline(e.target.value)}
+              className="border rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary-500"
+            />
+            <p className="text-xs text-gray-400 mt-1">
+              Оставьте пустым, если ограничения по сроку нет
+            </p>
           </div>
         </div>
 

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import apiClient from "../api/client";
+import { downloadFile } from "../utils/downloadFile";
 
 interface CandidateItem {
   id: number;
@@ -38,13 +39,17 @@ export default function HrReportVacancyCandidatesPage() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
 
-  const handleExcelExport = () => {
-    let url = `/api/v1/hr/vacancies/${id}/report-excel`;
+  const handleExcelExport = async () => {
+    let url = `/hr/vacancies/${id}/report-excel`;
     const params = new URLSearchParams();
     if (dateFrom) params.append("date_from", dateFrom);
     if (dateTo) params.append("date_to", dateTo);
     if (params.toString()) url += `?${params.toString()}`;
-    window.open(url, "_blank");
+    try {
+      await downloadFile(url, `report_${vacancyTitle || id}.xlsx`);
+    } catch {
+      alert("Ошибка экспорта Excel");
+    }
   };
 
   useEffect(() => {

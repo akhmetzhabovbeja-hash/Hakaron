@@ -65,12 +65,20 @@ export default function HrReportCandidateAnalysisPage() {
             {analysis.email} &middot; {analysis.vacancy_title}
           </p>
         </div>
-        <Link
-          to={`/hr/reports/candidate/${id}/dossier`}
-          className="bg-gray-800 text-white px-5 py-2.5 rounded-lg hover:bg-gray-900 font-medium"
-        >
-          Досье абитуриента
-        </Link>
+        <div className="flex gap-2">
+          <button
+            onClick={() => window.open(`/api/v1/hr/candidates/${id}/report-pdf`, "_blank")}
+            className="bg-red-600 text-white px-4 py-2.5 rounded-lg hover:bg-red-700 font-medium"
+          >
+            PDF
+          </button>
+          <Link
+            to={`/hr/reports/candidate/${id}/dossier`}
+            className="bg-gray-800 text-white px-5 py-2.5 rounded-lg hover:bg-gray-900 font-medium"
+          >
+            Досье абитуриента
+          </Link>
+        </div>
       </div>
 
       {/* Score cards */}

@@ -35,6 +35,17 @@ export default function HrReportVacancyCandidatesPage() {
   const [candidates, setCandidates] = useState<CandidateItem[]>([]);
   const [vacancyTitle, setVacancyTitle] = useState("");
   const [loading, setLoading] = useState(true);
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+
+  const handleExcelExport = () => {
+    let url = `/api/v1/hr/vacancies/${id}/report-excel`;
+    const params = new URLSearchParams();
+    if (dateFrom) params.append("date_from", dateFrom);
+    if (dateTo) params.append("date_to", dateTo);
+    if (params.toString()) url += `?${params.toString()}`;
+    window.open(url, "_blank");
+  };
 
   useEffect(() => {
     Promise.all([
@@ -58,10 +69,38 @@ export default function HrReportVacancyCandidatesPage() {
         &larr; Назад к отчётам
       </Link>
 
-      <h2 className="text-3xl font-bold mt-4 mb-2">{vacancyTitle}</h2>
-      <p className="text-gray-600 mb-8">
-        Абитуриенты: {candidates.length}
-      </p>
+      <h2 className="text-3xl font-bold mt-4 mb-4">{vacancyTitle}</h2>
+
+      {/* Date filter + Excel export */}
+      <div className="bg-white rounded-xl shadow p-4 mb-6 flex items-center gap-4 flex-wrap">
+        <div className="flex items-center gap-2">
+          <label className="text-sm text-gray-500">От:</label>
+          <input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+            className="border rounded-lg px-3 py-1.5 text-sm"
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <label className="text-sm text-gray-500">До:</label>
+          <input
+            type="date"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+            className="border rounded-lg px-3 py-1.5 text-sm"
+          />
+        </div>
+        <button
+          onClick={handleExcelExport}
+          className="bg-green-600 text-white px-5 py-1.5 rounded-lg hover:bg-green-700 text-sm font-medium flex items-center gap-2"
+        >
+          Excel Экспорт
+        </button>
+        <span className="text-gray-400 text-sm ml-auto">
+          Абитуриентов: {candidates.length}
+        </span>
+      </div>
 
       {loading ? (
         <p className="text-gray-500">Загрузка...</p>

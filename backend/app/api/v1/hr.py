@@ -1,8 +1,20 @@
-from datetime import datetime, timezone
+import io
+import os
+from datetime import datetime, timezone, date, time
 
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select, or_
+from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import StreamingResponse
+from sqlalchemy import select, or_, func
 from sqlalchemy.ext.asyncio import AsyncSession
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import ParagraphStyle
+from reportlab.lib.units import mm
+from reportlab.lib.colors import HexColor
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill, Alignment
 
 from app.api.v1.auth import get_current_user
 from app.core.database import get_db
@@ -370,6 +382,37 @@ async def invite_candidate(
 
 
 # ---------------------------------------------------------------------------
+# PDF / Excel font & label helpers
+# ---------------------------------------------------------------------------
+
+_fonts_registered = False
+
+
+def _register_fonts():
+    global _fonts_registered
+    if _fonts_registered:
+        return
+    for path, name in [
+        ("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", "DejaVu"),
+        ("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", "DejaVuBold"),
+    ]:
+        if os.path.exists(path):
+            pdfmetrics.registerFont(TTFont(name, path))
+    _fonts_registered = True
+
+
+STATUS_LABELS = {
+    "pending": "Ожидание",
+    "processing": "Анализ",
+    "analyzed": "Проанализирован",
+    "hr_review": "На рассмотрении",
+    "sent_to_manager": "У комиссии",
+    "approved": "Зачислен",
+    "rejected": "Не прошёл",
+}
+
+
+# ---------------------------------------------------------------------------
 # Candidates per vacancy (all statuses)
 # ---------------------------------------------------------------------------
 
@@ -478,4 +521,329 @@ async def get_candidate_dossier(
             )
             for a in answers
         ],
+    )
+
+
+# ---------------------------------------------------------------------------
+# PDF report for a single candidate
+# ---------------------------------------------------------------------------
+
+
+@router.get("/candidates/{analysis_id}/report-pdf")
+async def get_candidate_report_pdf(
+    analysis_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Generate a PDF dossier report for a candidate."""
+    _require_hr(current_user)
+    _register_fonts()
+
+    # ---- data fetching (same as dossier) ----
+    result = await db.execute(
+        select(CandidateAnalysis, CandidateProfile, Vacancy)
+        .join(CandidateProfile, CandidateAnalysis.candidate_id == CandidateProfile.id)
+        .join(Vacancy, CandidateAnalysis.vacancy_id == Vacancy.id)
+        .where(CandidateAnalysis.id == analysis_id)
+    )
+    row = result.one_or_none()
+    if not row:
+        raise HTTPException(status_code=404, detail="Analysis not found")
+
+    analysis, profile, vacancy = row
+
+    user_result = await db.execute(select(User).where(User.id == profile.user_id))
+    user = user_result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    answers_result = await db.execute(
+        select(QuestionnaireResponse)
+        .where(QuestionnaireResponse.candidate_id == profile.id)
+        .order_by(QuestionnaireResponse.question_number)
+    )
+    answers = answers_result.scalars().all()
+
+    # ---- build PDF ----
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=A4, leftMargin=20 * mm, rightMargin=20 * mm,
+                            topMargin=20 * mm, bottomMargin=20 * mm)
+
+    base_font = "DejaVu" if os.path.exists("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf") else "Helvetica"
+    bold_font = "DejaVuBold" if os.path.exists("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf") else "Helvetica-Bold"
+
+    title_style = ParagraphStyle("title", fontName=bold_font, fontSize=18,
+                                  textColor=HexColor("#2563eb"), spaceAfter=12)
+    heading_style = ParagraphStyle("heading", fontName=bold_font, fontSize=13,
+                                    textColor=HexColor("#1e3a5f"), spaceBefore=14, spaceAfter=6)
+    normal_style = ParagraphStyle("normal", fontName=base_font, fontSize=10, leading=14)
+    small_style = ParagraphStyle("small", fontName=base_font, fontSize=9, leading=12)
+    bullet_style = ParagraphStyle("bullet", fontName=base_font, fontSize=10, leading=14,
+                                   leftIndent=12, bulletIndent=0, bulletFontName=base_font)
+
+    elements: list = []
+
+    # 1. Title
+    elements.append(Paragraph("inVision U — Досье абитуриента", title_style))
+    elements.append(Spacer(1, 6 * mm))
+
+    # 2. Profile block
+    profile_data = [
+        ["ФИО", user.name or "—"],
+        ["Email", user.email or "—"],
+        ["Телефон", user.phone or "—"],
+        ["Программа", vacancy.title or "—"],
+    ]
+    profile_table = Table(profile_data, colWidths=[45 * mm, 120 * mm])
+    profile_table.setStyle(TableStyle([
+        ("FONTNAME", (0, 0), (0, -1), bold_font),
+        ("FONTNAME", (1, 0), (1, -1), base_font),
+        ("FONTSIZE", (0, 0), (-1, -1), 10),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+        ("TOPPADDING", (0, 0), (-1, -1), 4),
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+    ]))
+    elements.append(profile_table)
+    elements.append(Spacer(1, 4 * mm))
+
+    # 3. AI Assessment block
+    elements.append(Paragraph("AI-оценка", heading_style))
+    score_headers = [
+        Paragraph("<b>Общий балл</b>", small_style),
+        Paragraph("<b>Соответствие</b>", small_style),
+        Paragraph("<b>Потенциал</b>", small_style),
+        Paragraph("<b>Траектория роста</b>", small_style),
+    ]
+    score_values = [
+        str(analysis.total_score or 0),
+        f"{round((analysis.vacancy_match or 0) * 100)}%",
+        str(analysis.growth_potential or "—"),
+        f"{round((analysis.growth_path_score or 0) * 100)}%",
+    ]
+    score_table = Table([score_headers, score_values], colWidths=[40 * mm] * 4)
+    score_table.setStyle(TableStyle([
+        ("FONTNAME", (0, 0), (-1, -1), base_font),
+        ("FONTSIZE", (0, 0), (-1, -1), 10),
+        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+        ("GRID", (0, 0), (-1, -1), 0.5, HexColor("#cbd5e1")),
+        ("BACKGROUND", (0, 0), (-1, 0), HexColor("#eff6ff")),
+        ("TOPPADDING", (0, 0), (-1, -1), 4),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+    ]))
+    elements.append(score_table)
+    elements.append(Spacer(1, 4 * mm))
+
+    # 4. Strengths
+    strengths = analysis.strengths or []
+    if strengths:
+        elements.append(Paragraph("Сильные стороны", heading_style))
+        for s in strengths:
+            elements.append(Paragraph(f"• {s}", bullet_style))
+
+    # 5. Weaknesses
+    weaknesses = analysis.weaknesses or []
+    if weaknesses:
+        elements.append(Paragraph("Зоны развития", heading_style))
+        for w in weaknesses:
+            elements.append(Paragraph(f"• {w}", bullet_style))
+
+    # 6. AI Summary
+    if analysis.summary:
+        elements.append(Paragraph("AI-резюме", heading_style))
+        elements.append(Paragraph(analysis.summary, normal_style))
+
+    # 7. AI Detection
+    flags = analysis.ai_detection_flags or []
+    if flags:
+        elements.append(Paragraph("AI-детекция", heading_style))
+        for flag in flags:
+            if isinstance(flag, dict):
+                q_num = flag.get("question_number", "?")
+                reason = flag.get("reason", str(flag))
+                elements.append(Paragraph(f"• Вопрос {q_num}: {reason}", bullet_style))
+            else:
+                elements.append(Paragraph(f"• {flag}", bullet_style))
+
+    # 8. Answers
+    if answers:
+        elements.append(Paragraph("Ответы на вопросы", heading_style))
+        for a in answers:
+            elements.append(Spacer(1, 2 * mm))
+            elements.append(Paragraph(
+                f"<b>Вопрос {a.question_number}:</b> {a.question_text}", normal_style
+            ))
+            elements.append(Paragraph(a.answer_text, small_style))
+
+    doc.build(elements)
+    buf.seek(0)
+
+    return StreamingResponse(
+        buf,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="report_{analysis_id}.pdf"',
+        },
+    )
+
+
+# ---------------------------------------------------------------------------
+# Excel report for all candidates in a vacancy
+# ---------------------------------------------------------------------------
+
+
+@router.get("/vacancies/{vacancy_id}/report-excel")
+async def get_vacancy_report_excel(
+    vacancy_id: int,
+    date_from: str | None = Query(None),
+    date_to: str | None = Query(None),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Generate an Excel report for all candidates in a vacancy/program."""
+    _require_hr(current_user)
+
+    # Verify vacancy
+    vac_result = await db.execute(select(Vacancy).where(Vacancy.id == vacancy_id))
+    vacancy = vac_result.scalar_one_or_none()
+    if not vacancy:
+        raise HTTPException(status_code=404, detail="Vacancy not found")
+
+    # Build query
+    query = (
+        select(CandidateAnalysis, CandidateProfile)
+        .join(CandidateProfile, CandidateAnalysis.candidate_id == CandidateProfile.id)
+        .where(CandidateAnalysis.vacancy_id == vacancy_id)
+    )
+
+    parsed_from = None
+    parsed_to = None
+    if date_from:
+        parsed_from = date.fromisoformat(date_from)
+        query = query.where(CandidateAnalysis.created_at >= datetime.combine(parsed_from, time.min, tzinfo=timezone.utc))
+    if date_to:
+        parsed_to = date.fromisoformat(date_to)
+        query = query.where(CandidateAnalysis.created_at <= datetime.combine(parsed_to, time.max, tzinfo=timezone.utc))
+
+    query = query.order_by(CandidateAnalysis.total_score.desc())
+    result = await db.execute(query)
+    rows = result.all()
+
+    # ---- Build workbook ----
+    wb = Workbook()
+
+    # ----- Sheet 1: Абитуриенты -----
+    ws1 = wb.active
+    ws1.title = "Абитуриенты"
+
+    header_font = Font(name="Calibri", bold=True, color="FFFFFF", size=11)
+    header_fill = PatternFill(start_color="2563eb", end_color="2563eb", fill_type="solid")
+    header_alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+
+    headers = ["№", "ФИО", "Email", "Общий балл", "Соответствие%", "Потенциал",
+               "Траектория роста%", "Статус", "AI-флаги", "Дата подачи"]
+    for col_idx, header in enumerate(headers, 1):
+        cell = ws1.cell(row=1, column=col_idx, value=header)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = header_alignment
+
+    for row_idx, (analysis, profile) in enumerate(rows, 2):
+        flags = analysis.ai_detection_flags or []
+        flag_count = len(flags)
+        status_label = STATUS_LABELS.get(analysis.status.value, analysis.status.value)
+        created = analysis.created_at.strftime("%Y-%m-%d") if analysis.created_at else "—"
+
+        ws1.cell(row=row_idx, column=1, value=row_idx - 1)
+        ws1.cell(row=row_idx, column=2, value=profile.full_name or "—")
+        ws1.cell(row=row_idx, column=3, value=profile.email or "—")
+        ws1.cell(row=row_idx, column=4, value=analysis.total_score or 0)
+        ws1.cell(row=row_idx, column=5, value=round((analysis.vacancy_match or 0) * 100, 1))
+        ws1.cell(row=row_idx, column=6, value=analysis.growth_potential or "—")
+        ws1.cell(row=row_idx, column=7, value=round((analysis.growth_path_score or 0) * 100, 1))
+        ws1.cell(row=row_idx, column=8, value=status_label)
+        ws1.cell(row=row_idx, column=9, value=flag_count)
+        ws1.cell(row=row_idx, column=10, value=created)
+
+    # Auto-width
+    for col in ws1.columns:
+        max_len = 0
+        col_letter = col[0].column_letter
+        for cell in col:
+            try:
+                if cell.value:
+                    max_len = max(max_len, len(str(cell.value)))
+            except Exception:
+                pass
+        ws1.column_dimensions[col_letter].width = min(max_len + 4, 50)
+
+    # ----- Sheet 2: Сводка -----
+    ws2 = wb.create_sheet("Сводка")
+    bold_font = Font(bold=True)
+
+    period_str = "Все время"
+    if parsed_from and parsed_to:
+        period_str = f"{parsed_from.isoformat()} — {parsed_to.isoformat()}"
+    elif parsed_from:
+        period_str = f"с {parsed_from.isoformat()}"
+    elif parsed_to:
+        period_str = f"по {parsed_to.isoformat()}"
+
+    ws2.cell(row=1, column=1, value="Программа:").font = bold_font
+    ws2.cell(row=1, column=2, value=vacancy.title)
+    ws2.cell(row=2, column=1, value="Период:").font = bold_font
+    ws2.cell(row=2, column=2, value=period_str)
+
+    total_count = len(rows)
+    avg_score = sum((a.total_score or 0) for a, _ in rows) / total_count if total_count else 0
+    avg_match = sum((a.vacancy_match or 0) for a, _ in rows) / total_count if total_count else 0
+
+    ws2.cell(row=4, column=1, value="Всего абитуриентов:").font = bold_font
+    ws2.cell(row=4, column=2, value=total_count)
+    ws2.cell(row=5, column=1, value="Средний балл:").font = bold_font
+    ws2.cell(row=5, column=2, value=round(avg_score, 1))
+    ws2.cell(row=6, column=1, value="Среднее соответствие:").font = bold_font
+    ws2.cell(row=6, column=2, value=f"{round(avg_match * 100, 1)}%")
+
+    ws2.cell(row=8, column=1, value="Распределение по статусам:").font = bold_font
+
+    status_counts: dict[str, int] = {}
+    ai_flagged = 0
+    for analysis, _ in rows:
+        st = analysis.status.value
+        status_counts[st] = status_counts.get(st, 0) + 1
+        if analysis.ai_detection_flags:
+            ai_flagged += 1
+
+    current_row = 9
+    for status_key, count in status_counts.items():
+        label = STATUS_LABELS.get(status_key, status_key)
+        ws2.cell(row=current_row, column=1, value=f"{label}:")
+        ws2.cell(row=current_row, column=2, value=count)
+        current_row += 1
+
+    ws2.cell(row=current_row, column=1, value="С AI-флагами:").font = bold_font
+    ws2.cell(row=current_row, column=2, value=ai_flagged)
+
+    # Auto-width for sheet 2
+    for col in ws2.columns:
+        max_len = 0
+        col_letter = col[0].column_letter
+        for cell in col:
+            try:
+                if cell.value:
+                    max_len = max(max_len, len(str(cell.value)))
+            except Exception:
+                pass
+        ws2.column_dimensions[col_letter].width = min(max_len + 4, 50)
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+
+    return StreamingResponse(
+        buf,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition": f'attachment; filename="report_{vacancy_id}.xlsx"',
+        },
     )

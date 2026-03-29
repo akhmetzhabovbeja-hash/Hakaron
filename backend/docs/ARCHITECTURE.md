@@ -1,4 +1,4 @@
-# Hakaron -- Архитектура решения
+# inVision U -- Архитектура решения
 
 ## Содержание
 
@@ -19,9 +19,9 @@
 
 ## Обзор
 
-**Hakaron** -- AI-платформа для интеллектуального отбора кандидатов. Платформа автоматизирует полный цикл рекрутинга: от создания вакансии с вопросами до финального одобрения кандидата руководителем.
+**inVision U** -- AI-система поддержки отбора кандидатов для университета inVision U by inDrive (хакатон Decentrathon 5.0). Система автоматизирует полный цикл приёмной кампании: от создания программы с вопросами до финального зачисления абитуриента приёмной комиссией.
 
-Ключевая идея: кандидат отвечает на набор вопросов (системных + кастомных), AI анализирует ответы и формирует детальную оценку, HR фильтрует лучших и отправляет руководителю на финальное решение.
+Ключевая идея: абитуриент отвечает на набор вопросов (21 системный + кастомные), AI анализирует ответы, проверяет на AI-генерацию и формирует детальную оценку, координатор отбора фильтрует лучших и отправляет в приёмную комиссию на финальное решение.
 
 ---
 
@@ -30,55 +30,56 @@
 ### Основной поток
 
 ```
- HR создает вакансию
-   + выбирает вопросы из банка (15 системных + свои)
+ Координатор создаёт программу
+   + выбирает вопросы из банка (21 системный + свои)
         |
         v
- Кандидат регистрируется (email + phone + пароль)
-   → видит список вакансий
-   → выбирает вакансию
-   → проходит анкету (отвечает на все вопросы)
+ Абитуриент регистрируется (email + phone + пароль)
+   -> видит список программ
+   -> выбирает программу
+   -> проходит анкету (отвечает на все вопросы)
         |
         v
  AI анализирует ответы (mock / ML-сервис)
-   → score/100, vacancy_match%, потенциал роста
-   → сильные стороны, зоны развития, AI-резюме
-   → статус: ANALYZED
+   -> score/100, program_match%, потенциал роста, growth_path_score
+   -> сильные стороны, зоны развития, AI-резюме
+   -> проверка на AI-генерацию (ai_detection_flags)
+   -> статус: ANALYZED
         |
         v
- HR видит результаты AI в разделе "Отчёты"
-   → просматривает анализ
-   → открывает Досье (ответы кандидата + профиль)
-   → отправляет лучших руководителю
-   → статус: SENT_TO_MANAGER
+ Координатор отбора видит результаты AI в разделе "Отчёты"
+   -> просматривает анализ + AI-флаги
+   -> открывает Досье (ответы абитуриента + профиль)
+   -> отправляет лучших в приёмную комиссию
+   -> статус: SENT_TO_MANAGER
         |
         v
- Руководитель видит кандидатов в дашборде
-   → просматривает AI-аналитику
-   → одобряет или отклоняет
-   → статус: APPROVED / REJECTED
+ Приёмная комиссия видит абитуриентов в дашборде
+   -> просматривает AI-аналитику
+   -> зачисляет или отклоняет
+   -> статус: APPROVED / REJECTED
         |
         v
- Кандидат видит обновленный статус
- HR видит одобренных → может пригласить на работу
+ Абитуриент видит обновлённый статус
+ Координатор видит зачисленных -> может отправить приглашение
 ```
 
-### Жизненный цикл кандидата (статусы)
+### Жизненный цикл абитуриента (статусы)
 
 ```
-PENDING → PROCESSING → ANALYZED → HR_REVIEW → SENT_TO_MANAGER → APPROVED
-                                                               → REJECTED
+PENDING -> PROCESSING -> ANALYZED -> HR_REVIEW -> SENT_TO_MANAGER -> APPROVED
+                                                                   -> REJECTED
 ```
 
 | Статус | Кто видит | Описание |
 |--------|-----------|----------|
 | PENDING | Система | Ответы получены, анализ не начат |
 | PROCESSING | Система | ML-сервис обрабатывает |
-| ANALYZED | HR | Анализ завершён, ждёт HR-ревью |
-| HR_REVIEW | HR | HR изучает кандидата |
-| SENT_TO_MANAGER | Руководитель | HR отправил на финальное решение |
-| APPROVED | Все | Руководитель одобрил |
-| REJECTED | Все | Руководитель отклонил |
+| ANALYZED | Координатор | Анализ завершён, ждёт ревью координатора |
+| HR_REVIEW | Координатор | Координатор изучает абитуриента |
+| SENT_TO_MANAGER | Комиссия | Координатор отправил на финальное решение |
+| APPROVED | Все | Приёмная комиссия зачислила |
+| REJECTED | Все | Приёмная комиссия отказала |
 
 ---
 
@@ -93,7 +94,7 @@ PENDING → PROCESSING → ANALYZED → HR_REVIEW → SENT_TO_MANAGER → APPROV
 | **Кэш / Брокер** | Redis 7 (кэш db=0, Celery broker db=1, Celery results db=2) |
 | **Фоновые задачи** | Celery |
 | **Аутентификация** | JWT (access 30min + refresh 7d), bcrypt, python-jose |
-| **Файлы** | StaticFiles (аватары → /uploads/avatars/) |
+| **Файлы** | StaticFiles (аватары -> /uploads/avatars/) |
 | **Контейнеризация** | Docker, Docker Compose |
 
 ---
@@ -103,63 +104,63 @@ PENDING → PROCESSING → ANALYZED → HR_REVIEW → SENT_TO_MANAGER → APPROV
 ### Диаграмма сервисов
 
 ```
-                    ┌─────────────────────────┐
-                    │       Frontend          │
-                    │  React + Vite + TS      │
-                    │  TailwindCSS + Zustand  │
-                    │       :3000             │
-                    └───────────┬─────────────┘
-                                │
-                                │ HTTP REST (JSON)
-                                │ Authorization: Bearer JWT
-                                v
-                    ┌───────────┴─────────────┐
-                    │      Backend API        │
-                    │   FastAPI + SQLAlchemy   │
-                    │       :8000             │
-                    │                         │
-                    │  /api/v1/auth/*         │
-                    │  /api/v1/profile/*      │
-                    │  /api/v1/vacancies/*    │
-                    │  /api/v1/candidates/*   │
-                    │  /api/v1/manager/*      │
-                    │  /api/v1/hr/*           │
-                    │  /uploads/* (static)    │
-                    └──┬──────┬─────────┬─────┘
-                       │      │         │
-          ┌────────────┘      │         └────────────┐
-          v                   v                      v
- ┌────────────────┐  ┌───────────────┐  ┌───────────────────┐
- │  PostgreSQL 16 │  │   Redis 7     │  │   ML Service      │
- │    :5432       │  │   :6379       │  │  FastAPI + PyTorch │
- │                │  │               │  │      :8001         │
- │  7 таблиц     │  │  db0: кэш     │  │                   │
- │  users         │  │  db1: broker  │  │  POST /analyze    │
- │  vacancies     │  │  db2: results │  │  (NLP scoring)    │
- │  questions     │  │               │  │  GPU: RTX 3070Ti  │
- │  vacancy_q     │  └───────┬───────┘  └───────────────────┘
- │  candidates    │          │
- │  responses     │   ┌──────┴──────┐
- │  analyses      │   │Celery Worker│
- └────────────────┘   │ (фоновые)  │
-                      │ - парсинг  │
-                      │ - письма   │
-                      └─────────────┘
+                    +---------------------------+
+                    |        Frontend           |
+                    |   React + Vite + TS       |
+                    |   TailwindCSS + Zustand   |
+                    |        :3000              |
+                    +-------------+-------------+
+                                  |
+                                  | HTTP REST (JSON)
+                                  | Authorization: Bearer JWT
+                                  v
+                    +-------------+-------------+
+                    |       Backend API         |
+                    |    FastAPI + SQLAlchemy    |
+                    |        :8000              |
+                    |                           |
+                    |  /api/v1/auth/*           |
+                    |  /api/v1/profile/*        |
+                    |  /api/v1/programs/*       |
+                    |  /api/v1/candidates/*     |
+                    |  /api/v1/manager/*        |
+                    |  /api/v1/hr/*             |
+                    |  /uploads/* (static)      |
+                    +--+------+----------+------+
+                       |      |          |
+          +------------+      |          +------------+
+          v                   v                       v
+ +----------------+  +---------------+  +---------------------+
+ |  PostgreSQL 16 |  |   Redis 7     |  |    ML Service       |
+ |    :5432       |  |   :6379       |  |  FastAPI + PyTorch   |
+ |                |  |               |  |      :8001           |
+ |  7 таблиц     |  |  db0: кэш     |  |                     |
+ |  users         |  |  db1: broker  |  |  POST /analyze      |
+ |  programs      |  |  db2: results |  |  POST /detect-ai    |
+ |  questions     |  |               |  |  (NLP scoring)      |
+ |  program_q     |  +-------+-------+  |  GPU: RTX 3070Ti    |
+ |  candidates    |          |          +---------------------+
+ |  responses     |   +------+------+
+ |  analyses      |   |Celery Worker|
+ +----------------+   | (фоновые)  |
+                      | - анализ   |
+                      | - письма   |
+                      +-------------+
 ```
 
 ### Связи между сервисами
 
 ```
-Frontend ──[HTTP/JSON]──> Backend ──[HTTP/JSON]──> ML Service
-                            │
-                            ├──[asyncpg]────> PostgreSQL (7 таблиц)
-                            ├──[redis]──────> Redis db=0 (кэш)
-                            ├──[redis]──────> Redis db=1 (Celery broker)
-                            └──[StaticFiles]─> /uploads/ (аватары)
-                                                  │
+Frontend --[HTTP/JSON]--> Backend --[HTTP/JSON]--> ML Service
+                            |
+                            +--[asyncpg]-----> PostgreSQL (7 таблиц)
+                            +--[redis]-------> Redis db=0 (кэш)
+                            +--[redis]-------> Redis db=1 (Celery broker)
+                            +--[StaticFiles]-> /uploads/ (аватары)
+                                                  |
                                            Celery Worker
-                                            │        │
-                                   [парсинг HH.ru] [email]
+                                            |        |
+                                    [анализ]     [email]
 ```
 
 ---
@@ -188,53 +189,53 @@ docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
 
 ## Роли пользователей и интерфейсы
 
-### Кандидат (candidate)
+### Абитуриент (candidate)
 
 Создаётся автоматически при регистрации. Не может выбрать другую роль.
 
 | Страница | Маршрут | Описание |
 |----------|---------|----------|
-| Вакансии | `/vacancies` | Список активных вакансий |
-| Анкета | `/questionnaire/:vacancyId` | Пошаговая форма с вопросами |
+| Программы | `/programs` | Список активных программ |
+| Анкета | `/questionnaire/:programId` | Пошаговая форма с вопросами |
 | Мой статус | `/status` | Статус рассмотрения заявки |
 | Профиль | `/profile` | Редактирование профиля, аватар |
 
-### HR (hr)
+### Координатор отбора (hr)
 
-Создаётся вручную в БД (UPDATE role = 'HR'). Управляет вакансиями и фильтрует кандидатов.
+Создаётся вручную в БД (UPDATE role = 'HR'). Управляет программами и фильтрует абитуриентов.
 
 | Страница | Маршрут | Описание |
 |----------|---------|----------|
-| Вакансии | `/hr` | Список вакансий, создание новых |
-| Создание вакансии | `/hr/vacancies/create` | Форма + выбор вопросов из банка |
-| Детали вакансии | `/hr/vacancies/:id` | Вакансия + кандидаты |
-| Ревью кандидата | `/hr/candidates/:id` | AI-анализ + отправка руководителю |
-| **Отчёты** | `/hr/reports` | Вакансии с количеством кандидатов |
-| Отчёт по вакансии | `/hr/reports/vacancy/:id` | Все кандидаты по вакансии (все статусы) |
-| Анализ кандидата | `/hr/reports/candidate/:id` | AI-аналитика + кнопка "Досье" |
-| **Досье кандидата** | `/hr/reports/candidate/:id/dossier` | Профиль + AI-оценка + ВСЕ ответы |
-| Одобренные | `/hr/approved` | Кандидаты после одобрения руководителем |
+| Программы | `/hr` | Список программ, создание новых |
+| Создание программы | `/hr/programs/create` | Форма + выбор вопросов из банка |
+| Детали программы | `/hr/programs/:id` | Программа + абитуриенты |
+| Ревью абитуриента | `/hr/candidates/:id` | AI-анализ + AI-флаги + отправка в комиссию |
+| **Отчёты** | `/hr/reports` | Программы с количеством абитуриентов |
+| Отчёт по программе | `/hr/reports/program/:id` | Все абитуриенты по программе (все статусы) |
+| Анализ абитуриента | `/hr/reports/candidate/:id` | AI-аналитика + кнопка "Досье" |
+| **Досье абитуриента** | `/hr/reports/candidate/:id/dossier` | Профиль + AI-оценка + AI-флаги + ВСЕ ответы |
+| Зачисленные | `/hr/approved` | Абитуриенты после зачисления комиссией |
 | Профиль | `/profile` | Редактирование своего профиля |
 
-### Руководитель (manager)
+### Приёмная комиссия (manager)
 
-Создаётся вручную в БД (UPDATE role = 'MANAGER'). Принимает финальное решение.
+Создаётся вручную в БД (UPDATE role = 'MANAGER'). Принимает финальное решение о зачислении.
 
 | Страница | Маршрут | Описание |
 |----------|---------|----------|
-| Дашборд | `/manager` | Кандидаты, отправленные HR (SENT_TO_MANAGER) |
-| Детали кандидата | `/manager/candidate/:id` | AI-аналитика + одобрить/отклонить |
+| Дашборд | `/manager` | Абитуриенты, отправленные координатором (SENT_TO_MANAGER) |
+| Детали абитуриента | `/manager/candidate/:id` | AI-аналитика + зачислить/отклонить |
 | Профиль | `/profile` | Редактирование своего профиля |
 
 ### Навигация в header
 
 | Роль | Пункты меню |
 |------|-------------|
-| Кандидат | Вакансии, Мой статус |
-| HR | Вакансии, Отчёты, Одобренные |
-| Руководитель | Дашборд |
+| Абитуриент | Программы, Мой статус |
+| Координатор отбора | Программы, Отчёты, Зачисленные |
+| Приёмная комиссия | Дашборд |
 
-Все роли: клик по имени/аватару → Профиль, кнопка "Выйти".
+Все роли: клик по имени/аватару -> Профиль, кнопка "Выйти".
 
 ---
 
@@ -243,71 +244,72 @@ docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
 ### ER-диаграмма
 
 ```
-┌──────────────────┐       ┌───────────────────┐
-│      users       │       │    vacancies      │
-├──────────────────┤       ├───────────────────┤
-│ PK id            │◄──┐   │ PK id             │
-│    email (uniq)  │   │   │    title          │
-│    phone (uniq)  │   │   │    description    │
-│    name          │   │   │    requirements   │
-│    hashed_password│  │   │    is_active      │
-│    role (enum)   │   └───│ FK created_by     │
-│    bio           │       │    created_at     │
-│    avatar_url    │       └─────────┬─────────┘
-│    is_active     │                 │
-│    created_at    │                 │ 1:N
-└─────┬──────┬─────┘                 │
-      │      │              ┌────────┴─────────┐
-      │      │              │vacancy_questions  │
-      │      │              ├──────────────────┤
-      │      │              │ PK id            │
-      │      │              │ FK vacancy_id    │
-      │      └──────────┐   │ FK question_id   │
-      │                 │   │    order         │
-      │                 │   └────────┬─────────┘
-      │                 │            │
-      │                 │   ┌────────┴─────────┐
-      │                 │   │    questions      │
-      │                 │   ├──────────────────┤
-      │                 │   │ PK id            │
-      │                 │   │    text          │
-      │                 │   │    category(enum)│
-      │                 │   │    is_system     │
-      │                 └───│ FK created_by    │
-      │                     │    created_at    │
-      │                     └──────────────────┘
-      │ 1:N
-┌─────┴────────────────────────────────────────┐
-│          candidate_profiles                   │
-├──────────────────────────────────────────────┤
-│ PK id                                         │
-│ FK user_id       → users.id (nullable)        │
-│ FK vacancy_id    → vacancies.id               │
-│    full_name, email, phone                    │
-│    source (enum: platform | hh_parsed)        │
-│    hh_url (nullable)                          │
-│    created_at                                 │
-└─────┬──────────────────┬─────────────────────┘
-      │ 1:N              │ 1:N
-      │                  │
-┌─────┴──────────┐  ┌───┴──────────────────────┐
-│questionnaire_  │  │  candidate_analyses       │
-│responses       │  ├──────────────────────────┤
-├────────────────┤  │ PK id                    │
-│ PK id          │  │ FK candidate_id          │
-│ FK candidate_id│  │ FK vacancy_id            │
-│  question_number│  │    total_score (0-100)  │
-│  question_text │  │    vacancy_match (float) │
-│  answer_text   │  │    growth_potential      │
-│  created_at    │  │    strengths (JSON[])    │
-└────────────────┘  │    weaknesses (JSON[])   │
-                    │    summary               │
-                    │    status (enum 7 значений)│
-                    │ FK hr_reviewed_by (null)  │
-                    │    sent_to_manager_at     │
-                    │ FK approved_by (null)     │
-                    │    created_at             │
-                    └──────────────────────────┘
++------------------+       +-------------------+
+|      users       |       |     programs      |
++------------------+       +-------------------+
+| PK id            |<--+   | PK id             |
+|    email (uniq)  |   |   |    title          |
+|    phone (uniq)  |   |   |    description    |
+|    name          |   |   |    requirements   |
+|    hashed_password|  |   |    is_active      |
+|    role (enum)   |   +---| FK created_by     |
+|    bio           |       |    created_at     |
+|    avatar_url    |       +---------+---------+
+|    is_active     |                 |
+|    created_at    |                 | 1:N
++-----+------+-----+                 |
+      |      |              +--------+----------+
+      |      |              | program_questions  |
+      |      |              +-------------------+
+      |      |              | PK id             |
+      |      |              | FK program_id     |
+      |      +----------+   | FK question_id    |
+      |                 |   |    order          |
+      |                 |   +--------+----------+
+      |                 |            |
+      |                 |   +--------+----------+
+      |                 |   |    questions       |
+      |                 |   +-------------------+
+      |                 |   | PK id             |
+      |                 |   |    text           |
+      |                 |   |    category(enum) |
+      |                 |   |    is_system      |
+      |                 +---| FK created_by     |
+      |                     |    created_at     |
+      |                     +-------------------+
+      | 1:N
++-----+--------------------------------------------+
+|          candidate_profiles                       |
++---------------------------------------------------+
+| PK id                                             |
+| FK user_id       -> users.id (nullable)           |
+| FK program_id    -> programs.id                   |
+|    full_name, email, phone                        |
+|    source (enum: platform | manual)               |
+|    created_at                                     |
++-----+------------------+-------------------------+
+      | 1:N              | 1:N
+      |                  |
++-----+----------+  +---+---------------------------+
+|questionnaire_  |  |  candidate_analyses            |
+|responses       |  +--------------------------------+
++----------------+  | PK id                          |
+| PK id          |  | FK candidate_id                |
+| FK candidate_id|  | FK program_id                  |
+|  question_number|  |    total_score (0-100)         |
+|  question_text |  |    program_match (float)        |
+|  answer_text   |  |    growth_potential             |
+|  created_at    |  |    growth_path_score (float)    |
++----------------+  |    strengths (JSON[])           |
+                    |    weaknesses (JSON[])          |
+                    |    summary                      |
+                    |    ai_detection_flags (JSON)     |
+                    |    status (enum 7 значений)     |
+                    | FK hr_reviewed_by (null)         |
+                    |    sent_to_manager_at            |
+                    | FK approved_by (null)            |
+                    |    created_at                    |
+                    +--------------------------------+
 ```
 
 ### Таблицы
@@ -326,7 +328,7 @@ docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
 | is_active | BOOLEAN | default: true |
 | created_at | TIMESTAMPTZ | default: now() |
 
-#### vacancies
+#### programs
 | Поле | Тип | Ограничения |
 |------|-----|------------|
 | id | INTEGER | PK |
@@ -334,7 +336,7 @@ docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
 | description | TEXT | |
 | requirements | TEXT | default: "" |
 | is_active | BOOLEAN | default: true |
-| created_by | INTEGER | FK → users.id |
+| created_by | INTEGER | FK -> users.id |
 | created_at | TIMESTAMPTZ | default: now() |
 
 #### questions (банк вопросов)
@@ -342,39 +344,48 @@ docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
 |------|-----|------------|
 | id | INTEGER | PK |
 | text | TEXT | |
-| category | ENUM | experience / competencies / motivation / potential |
+| category | ENUM | experience / competencies / motivation / potential / leadership / growth_path |
 | is_system | BOOLEAN | default: false |
-| created_by | INTEGER | FK → users.id, nullable (null для системных) |
+| created_by | INTEGER | FK -> users.id, nullable (null для системных) |
 | created_at | TIMESTAMPTZ | default: now() |
 
-15 системных вопросов загружаются автоматически при старте бекенда (seed).
+21 системный вопрос загружается автоматически при старте бекенда (seed).
 
-#### vacancy_questions (M2M: вакансия ↔ вопрос)
+**QuestionCategory enum (6 значений):**
+| Значение | Описание |
+|----------|----------|
+| EXPERIENCE | Опыт и достижения |
+| COMPETENCIES | Навыки и компетенции |
+| MOTIVATION | Мотивация и ценности |
+| POTENTIAL | Потенциал и адаптивность |
+| LEADERSHIP | Лидерские качества |
+| GROWTH_PATH | Траектория роста |
+
+#### program_questions (M2M: программа <-> вопрос)
 | Поле | Тип | Ограничения |
 |------|-----|------------|
 | id | INTEGER | PK |
-| vacancy_id | INTEGER | FK → vacancies.id |
-| question_id | INTEGER | FK → questions.id |
+| program_id | INTEGER | FK -> programs.id |
+| question_id | INTEGER | FK -> questions.id |
 | order | INTEGER | default: 0 |
 
 #### candidate_profiles
 | Поле | Тип | Ограничения |
 |------|-----|------------|
 | id | INTEGER | PK |
-| user_id | INTEGER | FK → users.id, nullable |
-| vacancy_id | INTEGER | FK → vacancies.id |
+| user_id | INTEGER | FK -> users.id, nullable |
+| program_id | INTEGER | FK -> programs.id |
 | full_name | VARCHAR(255) | |
 | email | VARCHAR(255) | |
 | phone | VARCHAR(50) | default: "" |
-| source | ENUM | platform / hh_parsed |
-| hh_url | VARCHAR(500) | nullable |
+| source | ENUM | platform / manual |
 | created_at | TIMESTAMPTZ | default: now() |
 
 #### questionnaire_responses
 | Поле | Тип | Ограничения |
 |------|-----|------------|
 | id | INTEGER | PK |
-| candidate_id | INTEGER | FK → candidate_profiles.id |
+| candidate_id | INTEGER | FK -> candidate_profiles.id |
 | question_number | INTEGER | |
 | question_text | TEXT | |
 | answer_text | TEXT | |
@@ -384,19 +395,52 @@ docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
 | Поле | Тип | Ограничения |
 |------|-----|------------|
 | id | INTEGER | PK |
-| candidate_id | INTEGER | FK → candidate_profiles.id |
-| vacancy_id | INTEGER | FK → vacancies.id |
+| candidate_id | INTEGER | FK -> candidate_profiles.id |
+| program_id | INTEGER | FK -> programs.id |
 | total_score | INTEGER | default: 0 |
-| vacancy_match | FLOAT | default: 0.0 |
+| program_match | FLOAT | default: 0.0 |
 | growth_potential | TEXT | default: "" |
+| growth_path_score | FLOAT | default: 0.0 |
 | strengths | JSON | default: [] |
 | weaknesses | JSON | default: [] |
 | summary | TEXT | default: "" |
+| ai_detection_flags | JSON | default: {} |
 | status | ENUM | 7 значений (см. выше) |
-| hr_reviewed_by | INTEGER | FK → users.id, nullable |
+| hr_reviewed_by | INTEGER | FK -> users.id, nullable |
 | sent_to_manager_at | TIMESTAMPTZ | nullable |
-| approved_by | INTEGER | FK → users.id, nullable |
+| approved_by | INTEGER | FK -> users.id, nullable |
 | created_at | TIMESTAMPTZ | default: now() |
+
+**Поле `ai_detection_flags` (JSON) -- результат проверки на AI-генерацию:**
+```json
+{
+  "is_ai_suspected": true,
+  "confidence": 0.82,
+  "flags": [
+    "sentence_uniformity",
+    "low_type_token_ratio",
+    "chatgpt_patterns_ru",
+    "structured_formatting",
+    "excessive_length"
+  ],
+  "details": {
+    "sentence_uniformity": 0.91,
+    "type_token_ratio": 0.34,
+    "chatgpt_patterns_count": 5,
+    "has_structured_formatting": true,
+    "avg_answer_length": 487
+  }
+}
+```
+
+**5 эвристик AI-детекции:**
+| Эвристика | Описание |
+|-----------|----------|
+| sentence_uniformity | Однородность длин предложений (AI пишет равномерно) |
+| low_type_token_ratio | Низкое лексическое разнообразие (TTR < 0.4) |
+| chatgpt_patterns_ru | Паттерны ChatGPT в русском тексте (характерные обороты) |
+| structured_formatting | Чрезмерная структурированность (списки, нумерация) |
+| excessive_length | Избыточная длина ответов (> 300 слов на вопрос) |
 
 ---
 
@@ -407,8 +451,8 @@ docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
 ### Auth (`/auth`)
 | Метод | Путь | Доступ | Описание |
 |-------|------|--------|----------|
-| POST | /auth/register | Public | Регистрация (email, phone, name, password) → JWT |
-| POST | /auth/login | Public | Вход (email, password) → JWT |
+| POST | /auth/register | Public | Регистрация (email, phone, name, password) -> JWT |
+| POST | /auth/login | Public | Вход (email, password) -> JWT |
 | GET | /auth/me | JWT | Текущий пользователь |
 
 ### Profile (`/profile`)
@@ -418,42 +462,42 @@ docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
 | PUT | /profile/ | JWT | Обновить имя, телефон, bio |
 | POST | /profile/avatar | JWT | Загрузить аватар (multipart, max 5MB) |
 
-### Vacancies (`/vacancies`)
+### Programs (`/programs`)
 | Метод | Путь | Доступ | Описание |
 |-------|------|--------|----------|
-| GET | /vacancies/ | Public | Список активных вакансий |
-| GET | /vacancies/{id} | Public | Детали вакансии с вопросами |
+| GET | /programs/ | Public | Список активных программ |
+| GET | /programs/{id} | Public | Детали программы с вопросами |
 
 ### Candidates (`/candidates`)
 | Метод | Путь | Доступ | Описание |
 |-------|------|--------|----------|
-| POST | /candidates/submit-questionnaire | Candidate | Отправить анкету → создать profile + answers + mock AI analysis |
+| POST | /candidates/submit-questionnaire | Candidate | Отправить анкету -> создать profile + answers + AI analysis |
 | GET | /candidates/my-status | Candidate | Статус своей последней заявки |
 
-### Manager (`/manager`)
+### Manager (`/manager`) -- Приёмная комиссия
 | Метод | Путь | Доступ | Описание |
 |-------|------|--------|----------|
-| GET | /manager/candidates | Manager | Кандидаты со статусом SENT_TO_MANAGER |
+| GET | /manager/candidates | Manager | Абитуриенты со статусом SENT_TO_MANAGER |
 | GET | /manager/candidates/{id}/analysis | Manager | Полный AI-анализ |
-| POST | /manager/candidates/{id}/approve | Manager | Одобрить → APPROVED |
-| POST | /manager/candidates/{id}/reject | Manager | Отклонить → REJECTED |
+| POST | /manager/candidates/{id}/approve | Manager | Зачислить -> APPROVED |
+| POST | /manager/candidates/{id}/reject | Manager | Отклонить -> REJECTED |
 
-### HR (`/hr`)
+### HR (`/hr`) -- Координатор отбора
 | Метод | Путь | Доступ | Описание |
 |-------|------|--------|----------|
-| GET | /hr/vacancies | HR | Все вакансии |
-| POST | /hr/vacancies | HR | Создать вакансию |
-| GET | /hr/vacancies/{id} | HR | Детали вакансии с вопросами |
-| GET | /hr/vacancies/{id}/candidates | HR | Все кандидаты по вакансии (все статусы) |
+| GET | /hr/programs | HR | Все программы |
+| POST | /hr/programs | HR | Создать программу |
+| GET | /hr/programs/{id} | HR | Детали программы с вопросами |
+| GET | /hr/programs/{id}/candidates | HR | Все абитуриенты по программе (все статусы) |
 | GET | /hr/questions/bank | HR | Банк вопросов (системные + кастомные) |
 | POST | /hr/questions | HR | Создать кастомный вопрос |
-| POST | /hr/vacancies/{id}/questions | HR | Привязать вопросы к вакансии |
-| GET | /hr/candidates | HR | Кандидаты со статусом ANALYZED |
-| GET | /hr/candidates/{id} | HR | Полный AI-анализ кандидата |
-| GET | /hr/candidates/{id}/dossier | HR | Досье: профиль + AI + ответы |
-| POST | /hr/candidates/{id}/send-to-manager | HR | Отправить руководителю |
-| GET | /hr/approved | HR | Одобренные кандидаты |
-| POST | /hr/candidates/{id}/invite | HR | Пригласить кандидата |
+| POST | /hr/programs/{id}/questions | HR | Привязать вопросы к программе |
+| GET | /hr/candidates | HR | Абитуриенты со статусом ANALYZED |
+| GET | /hr/candidates/{id} | HR | Полный AI-анализ абитуриента |
+| GET | /hr/candidates/{id}/dossier | HR | Досье: профиль + AI + AI-флаги + ответы |
+| POST | /hr/candidates/{id}/send-to-manager | HR | Отправить в приёмную комиссию |
+| GET | /hr/approved | HR | Зачисленные абитуриенты |
+| POST | /hr/candidates/{id}/invite | HR | Отправить приглашение абитуриенту |
 
 ### Health
 | Метод | Путь | Доступ | Описание |
@@ -463,7 +507,8 @@ docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
 **ML Service** (порт 8001):
 | Метод | Путь | Описание |
 |-------|------|----------|
-| POST | /api/v1/analyze | AI-анализ ответов кандидата |
+| POST | /api/v1/analyze | AI-анализ ответов абитуриента |
+| POST | /api/v1/detect-ai | Детекция AI-генерированного текста |
 | GET | /health | ML service health check |
 
 ---
@@ -480,71 +525,71 @@ docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
 ### Регистрация
 - Роль **всегда** `CANDIDATE` (зашито на бекенде)
 - Валидация: уникальность email + уникальность phone
-- HR и Manager создаются вручную через БД
+- Координатор отбора и Приёмная комиссия создаются вручную через БД
 
 ### Поток
 
 ```
 Клиент                           Backend                    PostgreSQL
-  │                                │                            │
-  │── POST /auth/register ────────>│                            │
-  │   {name, email, phone, pass}   │── check email unique ─────>│
-  │                                │── check phone unique ─────>│
-  │                                │── INSERT user (role=cand) ─>│
-  │<── {access_token, refresh} ────│                            │
-  │                                │                            │
-  │── GET /auth/me ───────────────>│                            │
-  │   Authorization: Bearer AT     │── decode JWT → user_id ───>│
-  │<── {id, email, phone, name,    │<── user row ──────────────│
-  │     role, bio, avatar_url} ────│                            │
-  │                                │                            │
-  │── Redirect по роли ───────────>│                            │
-  │   candidate → /vacancies       │                            │
-  │   manager   → /manager         │                            │
-  │   hr        → /hr              │                            │
+  |                                |                            |
+  |-- POST /auth/register ------->|                            |
+  |   {name, email, phone, pass}   |-- check email unique ----->|
+  |                                |-- check phone unique ----->|
+  |                                |-- INSERT user (role=cand) ->|
+  |<-- {access_token, refresh} ----|                            |
+  |                                |                            |
+  |-- GET /auth/me --------------->|                            |
+  |   Authorization: Bearer AT     |-- decode JWT -> user_id -->|
+  |<-- {id, email, phone, name,    |<-- user row --------------|
+  |     role, bio, avatar_url} ----|                            |
+  |                                |                            |
+  |-- Redirect по роли ----------->|                            |
+  |   candidate -> /programs       |                            |
+  |   manager   -> /manager        |                            |
+  |   hr        -> /hr             |                            |
 ```
 
 ### Role-based access (frontend)
 - `ProtectedRoute` компонент проверяет `isAuthenticated` + `allowedRoles`
-- Неавторизован → `/auth`
-- Чужая роль → редирект на дефолтную страницу своей роли
+- Неавторизован -> `/auth`
+- Чужая роль -> редирект на дефолтную страницу своей роли
 
 ---
 
 ## Frontend-архитектура
 
 ### State Management
-- **Zustand** (`authStore`) — пользователь, JWT, login/register/logout/hydrate
+- **Zustand** (`authStore`) -- пользователь, JWT, login/register/logout/hydrate
 - Гидратация при загрузке: проверка токена через `GET /me`
 
 ### Роутинг
-- **React Router v6** — вложенные маршруты через `<MainLayout>` + `<Outlet>`
-- `RootRedirect` — при входе на `/` редирект по роли
+- **React Router v6** -- вложенные маршруты через `<MainLayout>` + `<Outlet>`
+- `RootRedirect` -- при входе на `/` редирект по роли
 
 ### API-клиент
 - **Axios** с interceptors:
   - Request: подставляет `Authorization: Bearer` из localStorage
-  - Response: при 401 → очистка токена → редирект на `/auth`
+  - Response: при 401 -> очистка токена -> редирект на `/auth`
 
 ### Страницы (16)
 | Страница | Файл | Описание |
 |----------|------|----------|
 | AuthPage | AuthPage.tsx | Табы Вход/Регистрация |
 | ProfilePage | ProfilePage.tsx | Аватар, имя, телефон, bio |
-| VacanciesPage | VacanciesPage.tsx | Список вакансий (для кандидата) |
+| ProgramsPage | ProgramsPage.tsx | Список программ (для абитуриента) |
 | CandidateQuestionnairePage | CandidateQuestionnairePage.tsx | Пошаговая анкета |
 | CandidateStatusPage | CandidateStatusPage.tsx | Статус заявки |
-| ManagerDashboardPage | ManagerDashboardPage.tsx | Кандидаты SENT_TO_MANAGER |
-| ManagerCandidateDetailPage | ManagerCandidateDetailPage.tsx | AI-анализ + одобрить/отклонить |
-| HrDashboardPage | HrDashboardPage.tsx | Вакансии + кандидаты после AI |
-| HrVacancyCreatePage | HrVacancyCreatePage.tsx | Создание вакансии + выбор вопросов |
-| HrVacancyDetailPage | HrVacancyDetailPage.tsx | Вакансия + вопросы + кандидаты |
-| HrCandidateReviewPage | HrCandidateReviewPage.tsx | AI-анализ + отправка руководителю |
-| HrReportsPage | HrReportsPage.tsx | Отчёты: вакансии + кол-во кандидатов |
-| HrReportVacancyCandidatesPage | HrReportVacancyCandidatesPage.tsx | Кандидаты по вакансии (все статусы) |
+| ManagerDashboardPage | ManagerDashboardPage.tsx | Абитуриенты SENT_TO_MANAGER |
+| ManagerCandidateDetailPage | ManagerCandidateDetailPage.tsx | AI-анализ + зачислить/отклонить |
+| HrDashboardPage | HrDashboardPage.tsx | Программы + абитуриенты после AI |
+| HrProgramCreatePage | HrProgramCreatePage.tsx | Создание программы + выбор вопросов |
+| HrProgramDetailPage | HrProgramDetailPage.tsx | Программа + вопросы + абитуриенты |
+| HrCandidateReviewPage | HrCandidateReviewPage.tsx | AI-анализ + AI-флаги + отправка в комиссию |
+| HrReportsPage | HrReportsPage.tsx | Отчёты: программы + кол-во абитуриентов |
+| HrReportProgramCandidatesPage | HrReportProgramCandidatesPage.tsx | Абитуриенты по программе (все статусы) |
 | HrReportCandidateAnalysisPage | HrReportCandidateAnalysisPage.tsx | AI-анализ + кнопка "Досье" |
-| HrCandidateDossierPage | HrCandidateDossierPage.tsx | Досье: профиль + AI + ответы |
-| HrApprovedPage | HrApprovedPage.tsx | Одобренные → приглашение |
+| HrCandidateDossierPage | HrCandidateDossierPage.tsx | Досье: профиль + AI + AI-флаги + ответы |
+| HrApprovedPage | HrApprovedPage.tsx | Зачисленные -> приглашение |
 
 ---
 
@@ -552,31 +597,53 @@ docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
 
 ### Текущее состояние
 - Отдельный FastAPI на порту 8001
-- Эндпоинт `POST /api/v1/analyze` — возвращает mock-данные
-- AI-анализ пока эмулируется на бекенде (random scores при submit-questionnaire)
+- Эндпоинт `POST /api/v1/analyze` -- AI-анализ ответов абитуриента
+- Эндпоинт `POST /api/v1/detect-ai` -- детекция AI-генерированного текста
+- AI-анализ может эмулироваться на бекенде (mock scores при submit-questionnaire)
+
+### AI-детекция текста (rule-based)
+
+Система детекции AI-генерированных ответов использует 5 эвристик:
+
+1. **Sentence Uniformity** -- анализ равномерности длин предложений. AI-модели генерируют предложения похожей длины
+2. **Type-Token Ratio (TTR)** -- отношение уникальных слов к общему числу. Низкий TTR (< 0.4) характерен для AI
+3. **ChatGPT Patterns (RU)** -- поиск характерных оборотов ChatGPT в русском тексте (канцеляризмы, шаблонные связки)
+4. **Structured Formatting** -- детекция избыточной структурированности (маркированные списки, нумерация, подзаголовки)
+5. **Excessive Length** -- выявление чрезмерно длинных ответов (> 300 слов на вопрос)
+
+Результат сохраняется в поле `ai_detection_flags` (JSON) таблицы `candidate_analyses`.
+
+### Growth Path Score
+
+Новый показатель `growth_path_score` (Float, 0.0-1.0) в таблице `candidate_analyses`. Оценивает траекторию роста абитуриента на основе ответов из категорий GROWTH_PATH и POTENTIAL. Учитывает:
+- Наличие чёткого плана развития
+- Осознанность выбора направления
+- Готовность к долгосрочному обучению
 
 ### Целевая архитектура
 - GPU: NVIDIA RTX 3070 Ti (8GB VRAM)
 - Рекомендуемые модели:
-  - `cointegrated/rubert-tiny2` (~120MB) — быстрый
-  - `ai-forever/sbert_large_nlu_ru` (~1.3GB) — качественный
-  - `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2` (~470MB) — баланс
-- Pipeline: preprocessing → embeddings → scoring → vacancy matching → summary generation
+  - `cointegrated/rubert-tiny2` (~120MB) -- быстрый
+  - `ai-forever/sbert_large_nlu_ru` (~1.3GB) -- качественный
+  - `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2` (~470MB) -- баланс
+- Pipeline: preprocessing -> embeddings -> scoring -> program matching -> AI detection -> summary generation
 
-### Банк системных вопросов (15 шт.)
-| # | Категория | Вопрос (сокращённо) |
-|---|-----------|---------------------|
-| 1-4 | Опыт | Достижения, проблемы, неудачи, сложные задачи |
-| 5-8 | Компетенции | Навыки, обучаемость, командная работа, новые задачи |
-| 9-12 | Мотивация | Интерес к вакансии, цели, ценности, инициатива |
-| 13-15 | Потенциал | Свобода проекта, реакция на изменения, развитие |
+### Банк системных вопросов (21 шт.)
+| # | Категория | Вопросы (сокращённо) |
+|---|-----------|----------------------|
+| 1-4 | Опыт (EXPERIENCE) | Достижения, проблемы, неудачи, сложные задачи |
+| 5-8 | Компетенции (COMPETENCIES) | Навыки, обучаемость, командная работа, новые задачи |
+| 9-12 | Мотивация (MOTIVATION) | Интерес к программе, цели, ценности, инициатива |
+| 13-15 | Потенциал (POTENTIAL) | Свобода проекта, реакция на изменения, развитие |
+| 16-18 | Лидерство (LEADERSHIP) | Командное руководство, принятие решений, ответственность |
+| 19-21 | Траектория роста (GROWTH_PATH) | План развития, выбор направления, долгосрочное видение |
 
 ---
 
 ## Структура проекта
 
 ```
-Hakaron/
+inVisionU/
 ├── docker-compose.yml              # Production compose
 ├── docker-compose.dev.yml          # Dev override (hot-reload)
 ├── .env                            # Переменные окружения
@@ -603,17 +670,17 @@ Hakaron/
 │       └── pages/                  # 16 страниц
 │           ├── AuthPage.tsx
 │           ├── ProfilePage.tsx
-│           ├── VacanciesPage.tsx
+│           ├── ProgramsPage.tsx
 │           ├── CandidateQuestionnairePage.tsx
 │           ├── CandidateStatusPage.tsx
 │           ├── ManagerDashboardPage.tsx
 │           ├── ManagerCandidateDetailPage.tsx
 │           ├── HrDashboardPage.tsx
-│           ├── HrVacancyCreatePage.tsx
-│           ├── HrVacancyDetailPage.tsx
+│           ├── HrProgramCreatePage.tsx
+│           ├── HrProgramDetailPage.tsx
 │           ├── HrCandidateReviewPage.tsx
 │           ├── HrReportsPage.tsx
-│           ├── HrReportVacancyCandidatesPage.tsx
+│           ├── HrReportProgramCandidatesPage.tsx
 │           ├── HrReportCandidateAnalysisPage.tsx
 │           ├── HrCandidateDossierPage.tsx
 │           └── HrApprovedPage.tsx
@@ -629,30 +696,30 @@ Hakaron/
 │       │   └── security.py         # JWT + bcrypt
 │       ├── models/                 # 7 SQLAlchemy моделей
 │       │   ├── user.py
-│       │   ├── vacancy.py
+│       │   ├── program.py
 │       │   ├── question.py
-│       │   ├── vacancy_question.py
+│       │   ├── program_question.py
 │       │   ├── candidate.py
 │       │   ├── questionnaire.py
 │       │   └── analysis.py
 │       ├── schemas/                # Pydantic DTOs
 │       │   ├── auth.py
 │       │   ├── profile.py
-│       │   ├── vacancy.py
+│       │   ├── program.py
 │       │   ├── question.py
 │       │   └── candidate.py
 │       ├── api/v1/                 # 6 роутеров, 25+ эндпоинтов
 │       │   ├── auth.py
 │       │   ├── profile.py
-│       │   ├── vacancies.py
+│       │   ├── programs.py
 │       │   ├── candidates.py
 │       │   ├── manager.py
 │       │   └── hr.py
 │       ├── services/
 │       │   ├── analysis_service.py # HTTP клиент к ML
-│       │   └── parser_service.py   # HH.ru API
+│       │   └── ai_detection.py    # Rule-based AI детекция
 │       └── tasks/                  # Celery
-│           ├── parsing.py
+│           ├── analysis.py
 │           └── notifications.py
 │
 ├── ml-service/                     # ML FastAPI
@@ -660,9 +727,12 @@ Hakaron/
 │   ├── requirements.txt
 │   └── app/
 │       ├── main.py
-│       ├── api/analyze.py          # POST /api/v1/analyze
+│       ├── api/
+│       │   ├── analyze.py          # POST /api/v1/analyze
+│       │   └── detect_ai.py       # POST /api/v1/detect-ai
 │       └── services/
-│           └── nlp_analyzer.py     # Placeholder для ML pipeline
+│           ├── nlp_analyzer.py     # ML pipeline для анализа
+│           └── ai_detector.py     # Rule-based AI детекция
 │
 └── docs/                           # Документация
     ├── ARCHITECTURE.md             # Этот документ

@@ -48,7 +48,15 @@ export default function HrCandidateDossierPage() {
         &larr; Назад к анализу
       </Link>
 
-      <h2 className="text-3xl font-bold mt-4 mb-6">Досье абитуриента</h2>
+      <div className="flex items-center justify-between mt-4 mb-6">
+        <h2 className="text-3xl font-bold">Досье абитуриента</h2>
+        <button
+          onClick={() => window.open(`/api/v1/hr/candidates/${id}/report-pdf`, "_blank")}
+          className="bg-red-600 text-white px-5 py-2 rounded-lg hover:bg-red-700 flex items-center gap-2"
+        >
+          <span>PDF</span> Скачать досье
+        </button>
+      </div>
 
       {/* User Info Card */}
       <div className="bg-white rounded-xl shadow p-6 mb-6">

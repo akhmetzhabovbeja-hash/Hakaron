@@ -25,7 +25,6 @@ function deadlineInfo(deadline: string | null) {
   const hours = totalHours % 24;
   const minutes = totalMinutes % 60;
 
-  // <= 3 days: exact countdown
   if (days < 3) {
     let parts: string[] = [];
     if (days > 0) parts.push(`${days} дн.`);
@@ -34,7 +33,6 @@ function deadlineInfo(deadline: string | null) {
     return { expired: false, text: `Осталось ${parts.join(" ")}`, color: "text-red-600" };
   }
 
-  // > 3 days: show date
   return {
     expired: false,
     text: `До ${dl.toLocaleDateString("ru-RU", { day: "numeric", month: "long" })}`,
@@ -56,60 +54,76 @@ export default function VacanciesPage() {
 
   return (
     <div>
-      <h2 className="text-3xl font-bold mb-2">Программы</h2>
-      <p className="text-gray-600 mb-8">
-        Выберите программу и подайте заявку
-      </p>
+      {/* Hero section */}
+      <div className="mb-12">
+        <h1 className="text-5xl font-extrabold tracking-tight text-dark leading-tight">
+          Программы<br />
+          <span className="text-gray-300">inVision U</span>
+        </h1>
+        <div className="w-24 h-1 bg-dark mt-4 mb-4" />
+        <p className="text-gray-500 text-lg max-w-xl">
+          Выберите программу и подайте заявку. Год, который меняет всё.
+        </p>
+      </div>
 
       {loading ? (
-        <p className="text-gray-500">Загрузка...</p>
+        <div className="flex items-center gap-3 text-gray-400">
+          <div className="w-5 h-5 border-2 border-gray-300 border-t-dark rounded-full animate-spin" />
+          Загрузка программ...
+        </div>
       ) : vacancies.length === 0 ? (
-        <div className="text-center py-20 text-gray-500">
-          <p className="text-lg">Программ пока нет</p>
-          <p className="text-sm mt-1">Загляните позже</p>
+        <div className="text-center py-20">
+          <div className="text-6xl mb-4">📋</div>
+          <p className="text-xl font-bold text-dark">Программ пока нет</p>
+          <p className="text-gray-400 mt-2">Загляните позже</p>
         </div>
       ) : (
-        <div className="grid gap-4">
-          {vacancies.map((v) => {
+        <div className="grid gap-5">
+          {vacancies.map((v, idx) => {
             const dl = deadlineInfo(v.application_deadline);
             const isExpired = dl?.expired ?? false;
 
-            const Wrapper = isExpired ? "div" : Link;
-            const wrapperProps = isExpired
-              ? {}
-              : { to: `/questionnaire/${v.id}` };
-
             return (
-              <Wrapper
+              <div
                 key={v.id}
-                {...(wrapperProps as any)}
-                className={`bg-white rounded-xl shadow p-6 transition block ${
+                className={`group relative border border-gray-100 rounded-2xl p-8 transition-all ${
                   isExpired
-                    ? "opacity-60 cursor-not-allowed"
-                    : "hover:shadow-md"
+                    ? "opacity-50"
+                    : "hover:border-dark hover:shadow-lg"
                 }`}
               >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-lg font-semibold">{v.title}</h3>
-                    <p className="text-gray-500 mt-1">{v.description}</p>
+                <div className="flex items-start justify-between gap-6">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-3">
+                      <span className="text-xs font-bold text-gray-300 tracking-widest">
+                        {String(idx + 1).padStart(2, "0")}
+                      </span>
+                      <h3 className="text-2xl font-bold text-dark">{v.title}</h3>
+                    </div>
+                    <p className="text-gray-500 leading-relaxed max-w-2xl">
+                      {v.description}
+                    </p>
                     {dl && (
-                      <p className={`text-sm mt-2 font-medium ${dl.color}`}>
+                      <p className={`text-sm mt-3 font-semibold ${dl.color}`}>
                         {dl.text}
                       </p>
                     )}
                   </div>
+
                   {isExpired ? (
-                    <span className="text-red-500 font-medium whitespace-nowrap ml-4">
+                    <div className="shrink-0 px-6 py-3 bg-gray-100 text-gray-400 rounded-full text-sm font-medium">
                       Приём закрыт
-                    </span>
+                    </div>
                   ) : (
-                    <span className="text-primary-600 font-medium whitespace-nowrap ml-4">
-                      Подать заявку &rarr;
-                    </span>
+                    <Link
+                      to={`/questionnaire/${v.id}`}
+                      className="shrink-0 px-6 py-3 bg-dark text-white rounded-full text-sm font-semibold hover:bg-gray-800 transition group-hover:bg-accent group-hover:text-dark"
+                    >
+                      Подать заявку
+                    </Link>
                   )}
                 </div>
-              </Wrapper>
+              </div>
             );
           })}
         </div>

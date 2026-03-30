@@ -18,11 +18,7 @@ export default function HrApprovedPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    apiClient
-      .get("/hr/approved")
-      .then((res) => setCandidates(res.data))
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    apiClient.get("/hr/approved").then((res) => setCandidates(res.data)).catch(() => {}).finally(() => setLoading(false));
   }, []);
 
   const handleInvite = async (analysisId: number) => {
@@ -36,43 +32,61 @@ export default function HrApprovedPage() {
 
   return (
     <div>
-      <h2 className="text-3xl font-bold mb-8">Зачисленные абитуриенты</h2>
+      <div className="mb-10">
+        <h1 className="text-4xl font-extrabold tracking-tight text-dark">Зачисленные</h1>
+        <div className="w-16 h-1 bg-accent mt-3" />
+      </div>
 
       {loading ? (
-        <p className="text-gray-500">Загрузка...</p>
+        <p className="text-gray-400">Загрузка...</p>
       ) : candidates.length === 0 ? (
-        <div className="text-center py-20 text-gray-500">
-          <p className="text-lg">Нет зачисленных абитуриентов</p>
-          <p className="text-sm mt-1">
-            Приёмная комиссия ещё не зачислила ни одного абитуриента
-          </p>
+        <div className="text-center py-20">
+          <div className="text-6xl mb-4">🎓</div>
+          <p className="text-xl font-bold text-dark">Нет зачисленных абитуриентов</p>
+          <p className="text-gray-400 mt-2">Приёмная комиссия ещё не зачислила ни одного абитуриента</p>
         </div>
       ) : (
-        <div className="grid gap-4">
-          {candidates.map((c) => (
-            <div
-              key={c.id}
-              className="bg-white rounded-xl shadow p-6 flex items-center justify-between"
-            >
-              <div>
-                <h3 className="text-lg font-semibold">{c.full_name}</h3>
-                <p className="text-gray-500">{c.vacancy_title}</p>
-                <p className="text-sm text-gray-400">{c.email}</p>
+        <>
+          <div className="mb-6 text-sm text-gray-400">
+            Всего зачислено: <span className="font-bold text-dark">{candidates.length}</span>
+          </div>
+          <div className="grid gap-3">
+            {candidates.map((c, idx) => (
+              <div
+                key={c.id}
+                className="group border border-gray-100 rounded-2xl p-6 flex items-center justify-between hover:border-dark transition"
+              >
+                <div className="flex items-start gap-4">
+                  <span className="text-xs font-bold text-gray-300 tracking-widest mt-1">
+                    {String(idx + 1).padStart(2, "0")}
+                  </span>
+                  <div>
+                    <h3 className="text-lg font-bold text-dark">{c.full_name}</h3>
+                    <p className="text-gray-400 text-sm mt-0.5">{c.vacancy_title}</p>
+                    <p className="text-gray-300 text-xs mt-0.5">{c.email}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="text-right">
+                    <div className="text-2xl font-extrabold text-dark">{c.total_score}</div>
+                    <div className="text-[10px] text-gray-400 uppercase tracking-wide">баллов</div>
+                  </div>
+                  <div className="w-px h-10 bg-gray-100" />
+                  <div className="text-right">
+                    <div className="text-2xl font-extrabold text-dark">{Math.round(c.vacancy_match * 100)}%</div>
+                    <div className="text-[10px] text-gray-400 uppercase tracking-wide">match</div>
+                  </div>
+                  <button
+                    onClick={() => handleInvite(c.id)}
+                    className="ml-4 bg-dark text-white px-5 py-2.5 rounded-full text-sm font-semibold hover:bg-accent hover:text-dark transition"
+                  >
+                    Отправить оффер
+                  </button>
+                </div>
               </div>
-              <div className="flex items-center gap-4">
-                <span className="px-3 py-1 rounded-full font-bold text-green-600 bg-green-100">
-                  {c.total_score}/100
-                </span>
-                <button
-                  onClick={() => handleInvite(c.id)}
-                  className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700"
-                >
-                  Отправить оффер
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        </>
       )}
     </div>
   );

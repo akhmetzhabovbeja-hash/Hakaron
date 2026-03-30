@@ -6,29 +6,35 @@ export default function AuthPage() {
   const [tab, setTab] = useState<"login" | "register">("login");
 
   return (
-    <div className="min-h-[70vh] flex items-center justify-center">
+    <div className="min-h-[75vh] flex items-center justify-center">
       <div className="w-full max-w-md">
-        <h1 className="text-3xl font-bold text-center mb-8 text-primary-600">
-          inVision U
-        </h1>
+        {/* Header */}
+        <div className="text-center mb-10">
+          <h1 className="text-4xl font-extrabold tracking-tight text-dark">
+            inVision U
+          </h1>
+          <p className="text-gray-400 mt-2 text-sm">
+            Initiative of Arsen Tomsky powered by inDrive
+          </p>
+        </div>
 
         {/* Tabs */}
-        <div className="flex border-b mb-6">
+        <div className="flex bg-gray-100 rounded-full p-1 mb-8">
           <button
-            className={`flex-1 py-3 text-center font-medium transition ${
+            className={`flex-1 py-2.5 text-center text-sm font-medium rounded-full transition ${
               tab === "login"
-                ? "border-b-2 border-primary-600 text-primary-600"
-                : "text-gray-500 hover:text-gray-700"
+                ? "bg-dark text-white shadow-sm"
+                : "text-gray-500 hover:text-dark"
             }`}
             onClick={() => setTab("login")}
           >
             Вход
           </button>
           <button
-            className={`flex-1 py-3 text-center font-medium transition ${
+            className={`flex-1 py-2.5 text-center text-sm font-medium rounded-full transition ${
               tab === "register"
-                ? "border-b-2 border-primary-600 text-primary-600"
-                : "text-gray-500 hover:text-gray-700"
+                ? "bg-dark text-white shadow-sm"
+                : "text-gray-500 hover:text-dark"
             }`}
             onClick={() => setTab("register")}
           >
@@ -41,6 +47,9 @@ export default function AuthPage() {
     </div>
   );
 }
+
+const inputClass = "w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-dark focus:border-transparent outline-none transition";
+const btnClass = "w-full bg-dark text-white py-3 rounded-xl text-sm font-semibold hover:bg-gray-800 transition disabled:opacity-50";
 
 function LoginForm() {
   const navigate = useNavigate();
@@ -70,41 +79,17 @@ function LoginForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {error && (
-        <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm">
-          {error}
-        </div>
+        <div className="bg-red-50 text-red-600 p-3 rounded-xl text-sm">{error}</div>
       )}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Email
-        </label>
-        <input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-          placeholder="email@example.com"
-          required
-        />
+        <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">Email</label>
+        <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className={inputClass} placeholder="email@example.com" required />
       </div>
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Пароль
-        </label>
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-          placeholder="Введите пароль"
-          required
-        />
+        <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">Пароль</label>
+        <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className={inputClass} placeholder="Введите пароль" required />
       </div>
-      <button
-        type="submit"
-        disabled={loading}
-        className="w-full bg-primary-600 text-white py-2 rounded-lg hover:bg-primary-700 disabled:opacity-50"
-      >
+      <button type="submit" disabled={loading} className={btnClass}>
         {loading ? "Вход..." : "Войти"}
       </button>
     </form>
@@ -124,20 +109,13 @@ function RegisterForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-
-    if (password.length < 8) {
-      setError("Пароль должен содержать минимум 8 символов");
-      return;
-    }
-
+    if (password.length < 8) { setError("Пароль должен содержать минимум 8 символов"); return; }
     setLoading(true);
     try {
       await register(name, email, phone, password);
       navigate(getDefaultRoute());
     } catch (err: unknown) {
-      const msg =
-        (err as { response?: { data?: { detail?: string } } })?.response?.data
-          ?.detail || "Ошибка регистрации";
+      const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail || "Ошибка регистрации";
       setError(msg);
     } finally {
       setLoading(false);
@@ -147,68 +125,25 @@ function RegisterForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {error && (
-        <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm">
-          {error}
-        </div>
+        <div className="bg-red-50 text-red-600 p-3 rounded-xl text-sm">{error}</div>
       )}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Имя
-        </label>
-        <input
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          className="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-          placeholder="Ваше имя"
-          required
-        />
+        <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">Имя</label>
+        <input type="text" value={name} onChange={(e) => setName(e.target.value)} className={inputClass} placeholder="Ваше имя" required />
       </div>
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Email
-        </label>
-        <input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-          placeholder="email@example.com"
-          required
-        />
+        <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">Email</label>
+        <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className={inputClass} placeholder="email@example.com" required />
       </div>
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Номер телефона
-        </label>
-        <input
-          type="tel"
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-          className="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-          placeholder="+7 (999) 123-45-67"
-          required
-        />
+        <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">Телефон</label>
+        <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className={inputClass} placeholder="+7 (999) 123-45-67" required />
       </div>
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Пароль
-        </label>
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-          placeholder="Минимум 8 символов"
-          required
-          minLength={8}
-        />
+        <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">Пароль</label>
+        <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className={inputClass} placeholder="Минимум 8 символов" required minLength={8} />
       </div>
-      <button
-        type="submit"
-        disabled={loading}
-        className="w-full bg-primary-600 text-white py-2 rounded-lg hover:bg-primary-700 disabled:opacity-50"
-      >
+      <button type="submit" disabled={loading} className={btnClass}>
         {loading ? "Регистрация..." : "Зарегистрироваться"}
       </button>
     </form>

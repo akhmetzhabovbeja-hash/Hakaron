@@ -10,57 +10,19 @@ interface StatusData {
   manager_comment: string | null;
 }
 
-const statusConfig: Record<
-  string,
-  { icon: string; label: string; color: string; description: string }
-> = {
-  pending: {
-    icon: "\u23F3",
-    label: "Ожидание",
-    color: "bg-gray-100 text-gray-700",
-    description: "Ваша анкета принята и ожидает анализа.",
-  },
-  processing: {
-    icon: "\u2699\uFE0F",
-    label: "Анализируется",
-    color: "bg-blue-100 text-blue-700",
-    description: "AI-система анализирует ваши ответы.",
-  },
-  analyzed: {
-    icon: "\uD83D\uDD0D",
-    label: "На рассмотрении HR",
-    color: "bg-yellow-100 text-yellow-700",
-    description:
-      "Анализ завершён. Координатор отбора рассматривает вашу заявку.",
-  },
-  hr_review: {
-    icon: "\uD83D\uDD0D",
-    label: "На рассмотрении HR",
-    color: "bg-yellow-100 text-yellow-700",
-    description: "Координатор отбора рассматривает вашу заявку.",
-  },
-  sent_to_manager: {
-    icon: "\uD83D\uDCE8",
-    label: "У руководителя",
-    color: "bg-indigo-100 text-indigo-700",
-    description:
-      "Ваша заявка отправлена приёмной комиссии на финальное решение.",
-  },
-  approved: {
-    icon: "\u2705",
-    label: "Зачислен!",
-    color: "bg-green-100 text-green-700",
-    description:
-      "Поздравляем! Вы зачислены в программу! Координатор отбора свяжется с вами.",
-  },
-  rejected: {
-    icon: "\u274C",
-    label: "Отклонён",
-    color: "bg-red-100 text-red-700",
-    description:
-      "К сожалению, в этот раз не получилось. Вы можете подать заявку на другую программу.",
-  },
-};
+const statusSteps = [
+  { key: "pending", label: "Ожидание", icon: "01" },
+  { key: "processing", label: "AI-анализ", icon: "02" },
+  { key: "analyzed", label: "HR-рассмотрение", icon: "03" },
+  { key: "sent_to_manager", label: "Комиссия", icon: "04" },
+  { key: "approved", label: "Зачислен", icon: "05" },
+];
+
+function getStepIndex(status: string) {
+  if (status === "hr_review") return 2;
+  if (status === "rejected") return -1;
+  return statusSteps.findIndex((s) => s.key === status);
+}
 
 export default function CandidateStatusPage() {
   const [data, setData] = useState<StatusData | null>(null);
@@ -74,19 +36,18 @@ export default function CandidateStatusPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <p className="text-gray-500">Загрузка...</p>;
+  if (loading) return <p className="text-gray-400">Загрузка...</p>;
 
   if (!data || !data.has_application) {
     return (
       <div className="max-w-2xl mx-auto text-center py-20">
-        <div className="text-6xl mb-4">{"\uD83D\uDCCB"}</div>
-        <h2 className="text-2xl font-bold mb-2">Вы ещё не подавали заявку</h2>
-        <p className="text-gray-600 mb-6">
-          Выберите программу и подайте заявку
-        </p>
+        <h2 className="text-4xl font-extrabold text-dark mb-3">
+          Вы ещё не подавали заявку
+        </h2>
+        <p className="text-gray-500 mb-8">Выберите программу и начните свой путь</p>
         <Link
           to="/vacancies"
-          className="bg-primary-600 text-white px-8 py-3 rounded-lg hover:bg-primary-700"
+          className="inline-block bg-dark text-white px-8 py-3.5 rounded-full font-semibold hover:bg-gray-800 transition"
         >
           Перейти к программам
         </Link>
@@ -95,37 +56,77 @@ export default function CandidateStatusPage() {
   }
 
   const status = data.status || "pending";
-  const config = statusConfig[status] || statusConfig.pending;
+  const isRejected = status === "rejected";
+  const isApproved = status === "approved";
+  const stepIdx = getStepIndex(status);
 
   return (
-    <div className="max-w-2xl mx-auto text-center py-10">
-      <div className="bg-white rounded-xl shadow p-8">
-        <div className="text-6xl mb-4">{config.icon}</div>
-        <h2 className="text-2xl font-bold mb-2">{config.label}</h2>
-        {data.vacancy_title && (
-          <p className="text-gray-500 mb-4">Программа: {data.vacancy_title}</p>
-        )}
-        <p className="text-gray-600 mb-6">{config.description}</p>
+    <div className="max-w-3xl mx-auto py-10">
+      <h2 className="text-4xl font-extrabold text-dark mb-2">Мой статус</h2>
+      {data.vacancy_title && (
+        <p className="text-gray-400 mb-10">Программа: {data.vacancy_title}</p>
+      )}
 
-        <div
-          className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg ${config.color}`}
-        >
-          <span className="font-medium">Статус:</span> {config.label}
+      {/* Status result */}
+      {isApproved && (
+        <div className="bg-accent rounded-2xl p-8 mb-10">
+          <h3 className="text-3xl font-extrabold text-dark mb-2">Поздравляем! Вы зачислены!</h3>
+          <p className="text-dark/70">Координатор отбора свяжется с вами в ближайшее время.</p>
+          {data.total_score && (
+            <div className="mt-4 text-5xl font-extrabold text-dark">{data.total_score}<span className="text-2xl text-dark/50">/100</span></div>
+          )}
         </div>
+      )}
 
-        {data.total_score !== null && data.total_score > 0 && status === "approved" && (
-          <div className="mt-6 text-gray-500">
-            Ваш балл: <span className="font-bold text-green-600">{data.total_score}/100</span>
-          </div>
-        )}
+      {isRejected && (
+        <div className="bg-gray-100 rounded-2xl p-8 mb-10">
+          <h3 className="text-3xl font-extrabold text-dark mb-2">К сожалению, не в этот раз</h3>
+          <p className="text-gray-500">Вы можете подать заявку на другую программу.</p>
+        </div>
+      )}
 
-        {data.manager_comment && (status === "approved" || status === "rejected") && (
-          <div className="mt-6 text-left bg-gray-50 rounded-lg p-4">
-            <p className="text-sm text-gray-500 mb-1">Комментарий приёмной комиссии:</p>
-            <p className="text-gray-700">{data.manager_comment}</p>
-          </div>
-        )}
-      </div>
+      {/* Manager comment */}
+      {data.manager_comment && (isApproved || isRejected) && (
+        <div className="border border-gray-200 rounded-2xl p-6 mb-10">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
+            Комментарий приёмной комиссии
+          </p>
+          <p className="text-dark leading-relaxed">{data.manager_comment}</p>
+        </div>
+      )}
+
+      {/* Progress steps */}
+      {!isRejected && (
+        <div className="space-y-0">
+          {statusSteps.map((step, i) => {
+            const done = i <= stepIdx;
+            const current = i === stepIdx;
+            return (
+              <div key={step.key} className="flex items-start gap-4">
+                <div className="flex flex-col items-center">
+                  <div
+                    className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition ${
+                      done
+                        ? "bg-dark text-white"
+                        : "bg-gray-100 text-gray-400"
+                    } ${current ? "ring-4 ring-accent" : ""}`}
+                  >
+                    {step.icon}
+                  </div>
+                  {i < statusSteps.length - 1 && (
+                    <div className={`w-0.5 h-12 ${done ? "bg-dark" : "bg-gray-200"}`} />
+                  )}
+                </div>
+                <div className="pt-2">
+                  <p className={`font-semibold ${done ? "text-dark" : "text-gray-400"}`}>
+                    {step.label}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

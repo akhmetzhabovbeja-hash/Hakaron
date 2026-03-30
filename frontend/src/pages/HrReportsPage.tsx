@@ -15,75 +15,54 @@ export default function HrReportsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    apiClient
-      .get("/hr/vacancies")
-      .then(async (res) => {
-        const vacs = res.data as VacancyWithCount[];
-        // Fetch candidate counts for each vacancy
-        const withCounts = await Promise.all(
-          vacs.map(async (v) => {
-            try {
-              const cRes = await apiClient.get(
-                `/hr/vacancies/${v.id}/candidates`
-              );
-              return { ...v, candidateCount: cRes.data.length };
-            } catch {
-              return { ...v, candidateCount: 0 };
-            }
-          })
-        );
-        setVacancies(withCounts);
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    apiClient.get("/hr/vacancies").then(async (res) => {
+      const vacs = res.data as VacancyWithCount[];
+      const withCounts = await Promise.all(
+        vacs.map(async (v) => {
+          try { const cRes = await apiClient.get(`/hr/vacancies/${v.id}/candidates`); return { ...v, candidateCount: cRes.data.length }; }
+          catch { return { ...v, candidateCount: 0 }; }
+        })
+      );
+      setVacancies(withCounts);
+    }).catch(() => {}).finally(() => setLoading(false));
   }, []);
 
   return (
     <div>
-      <h2 className="text-3xl font-bold mb-2">Отчёты</h2>
-      <p className="text-gray-600 mb-8">
-        Выберите программу для просмотра абитуриентов и их анализа
-      </p>
+      <div className="mb-10">
+        <h1 className="text-4xl font-extrabold tracking-tight text-dark">Отчёты</h1>
+        <div className="w-16 h-1 bg-dark mt-3 mb-3" />
+        <p className="text-gray-400">Выберите программу для просмотра абитуриентов и их анализа</p>
+      </div>
 
       {loading ? (
-        <p className="text-gray-500">Загрузка...</p>
+        <p className="text-gray-400">Загрузка...</p>
       ) : vacancies.length === 0 ? (
-        <div className="text-center py-20 text-gray-500">
-          <p className="text-lg">Программ пока нет</p>
-          <p className="text-sm mt-1">
-            Создайте программу в разделе "Программы"
-          </p>
+        <div className="text-center py-20">
+          <p className="text-xl font-bold text-dark">Программ пока нет</p>
+          <p className="text-gray-400 mt-2">Создайте программу в разделе "Программы"</p>
         </div>
       ) : (
         <div className="grid gap-4">
-          {vacancies.map((v) => (
-            <Link
-              key={v.id}
-              to={`/hr/reports/vacancy/${v.id}`}
-              className="bg-white rounded-xl shadow p-6 hover:shadow-md transition block"
-            >
+          {vacancies.map((v, idx) => (
+            <Link key={v.id} to={`/hr/reports/vacancy/${v.id}`} className="group border border-gray-100 rounded-2xl p-7 hover:border-dark hover:shadow-md transition block">
               <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-lg font-semibold">{v.title}</h3>
-                  <p className="text-gray-500 mt-1 text-sm">{v.description}</p>
-                </div>
-                <div className="flex items-center gap-4">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-primary-600">
-                      {v.candidateCount ?? 0}
-                    </div>
-                    <div className="text-xs text-gray-400">абитуриентов</div>
+                <div className="flex items-start gap-4">
+                  <span className="text-xs font-bold text-gray-300 tracking-widest mt-1">{String(idx + 1).padStart(2, "0")}</span>
+                  <div>
+                    <h3 className="text-xl font-bold text-dark">{v.title}</h3>
+                    <p className="text-gray-400 mt-1 text-sm">{v.description}</p>
                   </div>
-                  <span
-                    className={`px-3 py-1 rounded-full text-sm ${
-                      v.is_active
-                        ? "bg-green-100 text-green-700"
-                        : "bg-gray-100 text-gray-500"
-                    }`}
-                  >
+                </div>
+                <div className="flex items-center gap-5">
+                  <div className="text-center">
+                    <div className="text-3xl font-extrabold text-dark">{v.candidateCount ?? 0}</div>
+                    <div className="text-[10px] text-gray-400 uppercase tracking-wide font-semibold">абитуриентов</div>
+                  </div>
+                  <span className={`px-3 py-1 rounded-full text-xs font-bold ${v.is_active ? "bg-accent text-dark" : "bg-gray-100 text-gray-500"}`}>
                     {v.is_active ? "Активна" : "Закрыта"}
                   </span>
-                  <span className="text-gray-400">&rarr;</span>
+                  <span className="text-gray-300 group-hover:text-dark transition">&rarr;</span>
                 </div>
               </div>
             </Link>

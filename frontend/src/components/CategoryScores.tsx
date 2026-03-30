@@ -9,16 +9,10 @@ interface Props {
   categoryScores: Record<string, CategoryScore> | null;
 }
 
-function scoreColor(score: number) {
-  if (score >= 80) return "bg-green-500";
-  if (score >= 60) return "bg-yellow-500";
-  return "bg-red-500";
-}
-
-function textColor(score: number) {
-  if (score >= 80) return "text-green-600";
-  if (score >= 60) return "text-yellow-600";
-  return "text-red-600";
+function barColor(score: number) {
+  if (score >= 80) return "bg-dark";
+  if (score >= 60) return "bg-gray-400";
+  return "bg-red-400";
 }
 
 export default function CategoryScores({ categoryScores }: Props) {
@@ -29,25 +23,25 @@ export default function CategoryScores({ categoryScores }: Props) {
   );
 
   return (
-    <div className="bg-white rounded-xl shadow p-6 mb-6">
-      <h3 className="font-semibold mb-4">Оценка по категориям (Explainable AI)</h3>
-      <div className="space-y-4">
+    <div className="border border-gray-100 rounded-2xl p-6 mb-6">
+      <h3 className="font-bold text-dark mb-5">Оценка по категориям (Explainable AI)</h3>
+      <div className="space-y-5">
         {entries.map(([key, cat]) => (
           <div key={key}>
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-sm font-medium text-gray-700">{cat.label}</span>
-              <span className={`text-sm font-bold ${textColor(cat.score)}`}>
-                {cat.score}/{cat.max}
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-sm font-semibold text-dark">{cat.label}</span>
+              <span className="text-sm font-bold text-dark">
+                {cat.score}<span className="text-gray-400 font-normal">/{cat.max}</span>
               </span>
             </div>
-            <div className="w-full bg-gray-200 rounded-full h-2.5">
+            <div className="w-full bg-gray-100 rounded-full h-2">
               <div
-                className={`h-2.5 rounded-full ${scoreColor(cat.score)}`}
+                className={`h-2 rounded-full transition-all ${barColor(cat.score)}`}
                 style={{ width: `${cat.score}%` }}
               />
             </div>
             {cat.explanation && (
-              <p className="text-xs text-gray-400 mt-1">{cat.explanation}</p>
+              <p className="text-xs text-gray-400 mt-1.5 leading-relaxed">{cat.explanation}</p>
             )}
           </div>
         ))}

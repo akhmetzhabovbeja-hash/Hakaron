@@ -2,22 +2,16 @@ import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import apiClient from "../api/client";
 import { downloadFile } from "../utils/downloadFile";
+import CategoryScores from "../components/CategoryScores";
 
 interface DossierData {
-  name: string;
-  email: string;
-  phone: string;
-  bio: string;
-  avatar_url: string | null;
-  total_score: number;
-  vacancy_match: number;
-  growth_potential: string;
-  strengths: string[];
-  weaknesses: string[];
-  summary: string;
-  status: string;
-  vacancy_title: string;
+  name: string; email: string; phone: string; bio: string; avatar_url: string | null;
+  total_score: number; vacancy_match: number; growth_potential: string;
+  strengths: string[]; weaknesses: string[]; summary: string; status: string; vacancy_title: string;
   answers: { question_number: number; question_text: string; answer_text: string }[];
+  category_scores?: Record<string, any> | null;
+  ai_detection_flags?: any[];
+  growth_path_score?: number;
 }
 
 export default function HrCandidateDossierPage() {
@@ -26,167 +20,116 @@ export default function HrCandidateDossierPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    apiClient
-      .get(`/hr/candidates/${id}/dossier`)
-      .then((res) => setDossier(res.data))
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    apiClient.get(`/hr/candidates/${id}/dossier`).then((res) => setDossier(res.data)).catch(() => {}).finally(() => setLoading(false));
   }, [id]);
 
-  if (loading) return <p className="text-gray-500">Загрузка досье...</p>;
+  if (loading) return <p className="text-gray-400">Загрузка досье...</p>;
   if (!dossier) return <p className="text-red-500">Досье не найдено</p>;
 
-  const avatarSrc = dossier.avatar_url
-    ? `http://localhost:8000${dossier.avatar_url}`
-    : null;
+  const avatarSrc = dossier.avatar_url ? `http://localhost:8000${dossier.avatar_url}` : null;
 
   return (
     <div className="max-w-4xl mx-auto">
-      <Link
-        to={`/hr/reports/candidate/${id}`}
-        className="text-primary-600 hover:underline text-sm"
-      >
-        &larr; Назад к анализу
-      </Link>
+      <Link to={`/hr/reports/candidate/${id}`} className="text-sm text-gray-400 hover:text-dark transition">&larr; Назад к анализу</Link>
 
-      <div className="flex items-center justify-between mt-4 mb-6">
-        <h2 className="text-3xl font-bold">Досье абитуриента</h2>
+      <div className="flex items-center justify-between mt-6 mb-8">
+        <h1 className="text-3xl font-extrabold text-dark">Досье абитуриента</h1>
         <button
-          onClick={() => downloadFile(`/hr/candidates/${id}/report-pdf`, `dossier_${id}.pdf`).catch(() => alert("Ошибка скачивания PDF"))}
-          className="bg-red-600 text-white px-5 py-2 rounded-lg hover:bg-red-700 flex items-center gap-2"
+          onClick={() => downloadFile(`/hr/candidates/${id}/report-pdf`, `dossier_${id}.pdf`).catch(() => alert("Ошибка PDF"))}
+          className="bg-dark text-white px-6 py-2.5 rounded-full text-sm font-semibold hover:bg-gray-800 transition"
         >
-          <span>PDF</span> Скачать досье
+          Скачать PDF
         </button>
       </div>
 
-      {/* User Info Card */}
-      <div className="bg-white rounded-xl shadow p-6 mb-6">
+      {/* User Info */}
+      <div className="border border-gray-100 rounded-2xl p-8 mb-8">
         <div className="flex items-start gap-6">
           {avatarSrc ? (
-            <img
-              src={avatarSrc}
-              alt="Аватар"
-              className="w-20 h-20 rounded-full object-cover border-2 border-gray-200"
-            />
+            <img src={avatarSrc} alt="" className="w-20 h-20 rounded-full object-cover border-2 border-gray-100" />
           ) : (
-            <div className="w-20 h-20 rounded-full bg-primary-100 flex items-center justify-center text-primary-600 text-2xl font-bold shrink-0">
+            <div className="w-20 h-20 rounded-full bg-dark text-white flex items-center justify-center text-2xl font-bold shrink-0">
               {dossier.name.charAt(0).toUpperCase()}
             </div>
           )}
           <div className="flex-1">
-            <h3 className="text-xl font-bold">{dossier.name}</h3>
-            <p className="text-gray-500 mt-1">{dossier.vacancy_title}</p>
-            <div className="grid grid-cols-2 gap-4 mt-4 text-sm">
+            <h3 className="text-2xl font-bold text-dark">{dossier.name}</h3>
+            <p className="text-gray-400 mt-1">{dossier.vacancy_title}</p>
+            <div className="grid grid-cols-2 gap-4 mt-5 text-sm">
               <div>
-                <span className="text-gray-400">Email:</span>
-                <span className="ml-2 text-gray-700">{dossier.email}</span>
+                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Email</span>
+                <p className="text-dark mt-0.5">{dossier.email}</p>
               </div>
               <div>
-                <span className="text-gray-400">Телефон:</span>
-                <span className="ml-2 text-gray-700">{dossier.phone}</span>
+                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Телефон</span>
+                <p className="text-dark mt-0.5">{dossier.phone}</p>
               </div>
             </div>
             {dossier.bio && (
-              <div className="mt-3">
-                <span className="text-gray-400 text-sm">О себе:</span>
-                <p className="text-gray-700 mt-1">{dossier.bio}</p>
+              <div className="mt-4">
+                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">О себе</span>
+                <p className="text-gray-600 mt-0.5 leading-relaxed">{dossier.bio}</p>
               </div>
             )}
           </div>
         </div>
       </div>
 
-      {/* AI Score Summary (compact) */}
-      <div className="bg-white rounded-xl shadow p-6 mb-6">
-        <h3 className="font-semibold mb-4">AI-оценка</h3>
-        <div className="grid grid-cols-4 gap-4 mb-4">
-          <div className="text-center">
-            <div
-              className={`text-2xl font-bold ${
-                dossier.total_score >= 85
-                  ? "text-green-600"
-                  : dossier.total_score >= 60
-                  ? "text-yellow-600"
-                  : "text-red-600"
-              }`}
-            >
-              {dossier.total_score}/100
-            </div>
-            <div className="text-xs text-gray-400">Балл</div>
+      {/* Score cards */}
+      <div className="grid grid-cols-4 gap-4 mb-8">
+        {[
+          { value: `${dossier.total_score}/100`, label: "Балл" },
+          { value: `${Math.round(dossier.vacancy_match * 100)}%`, label: "Соответствие" },
+          { value: dossier.growth_potential, label: "Потенциал" },
+          { value: `${Math.round((dossier.growth_path_score || 0) * 100)}%`, label: "Рост" },
+        ].map((card, i) => (
+          <div key={i} className="border border-gray-100 rounded-2xl p-5 text-center">
+            <div className="text-2xl font-extrabold text-dark">{card.value}</div>
+            <div className="text-[10px] text-gray-400 uppercase tracking-wide font-semibold mt-1">{card.label}</div>
           </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-primary-600">
-              {Math.round(dossier.vacancy_match * 100)}%
-            </div>
-            <div className="text-xs text-gray-400">Соответствие</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-purple-600">
-              {dossier.growth_potential}
-            </div>
-            <div className="text-xs text-gray-400">Потенциал</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-teal-600">
-              {Math.round((dossier as any).growth_path_score * 100 || 0)}%
-            </div>
-            <div className="text-xs text-gray-400">Траектория роста</div>
-          </div>
-        </div>
-        <p className="text-gray-600 text-sm">{dossier.summary}</p>
+        ))}
       </div>
 
+      {/* AI summary */}
+      <div className="border border-gray-100 rounded-2xl p-6 mb-8">
+        <h3 className="font-bold text-dark mb-2">AI-резюме</h3>
+        <p className="text-gray-600 leading-relaxed">{dossier.summary}</p>
+      </div>
+
+      {/* Category scores */}
+      <CategoryScores categoryScores={dossier.category_scores || null} />
+
       {/* Answers */}
-      <div className="bg-white rounded-xl shadow p-6">
-        <h3 className="font-semibold mb-4">
-          Ответы абитуриента ({dossier.answers.length})
+      <div className="border border-gray-100 rounded-2xl p-8">
+        <h3 className="text-lg font-bold text-dark mb-6">
+          Ответы абитуриента
+          <span className="ml-2 text-sm font-normal text-gray-400">({dossier.answers.length})</span>
         </h3>
         <div className="space-y-4">
           {dossier.answers.map((a) => {
-            const aiFlag = ((dossier as any).ai_detection_flags || []).find(
-              (f: any) => f.question_number === a.question_number
-            );
+            const aiFlag = (dossier.ai_detection_flags || []).find((f: any) => f.question_number === a.question_number);
             return (
-              <div
-                key={a.question_number}
-                className={`border rounded-lg p-4 ${
-                  aiFlag?.is_ai_generated
-                    ? "border-orange-300 bg-orange-50"
-                    : "border-gray-200"
-                }`}
-              >
-                <div className="flex items-start gap-3 mb-2">
-                  <span className="bg-primary-100 text-primary-700 text-xs font-bold px-2 py-1 rounded shrink-0">
-                    #{a.question_number}
+              <div key={a.question_number} className={`border rounded-xl p-5 ${aiFlag?.is_ai_generated ? "border-red-200 bg-red-50/30" : "border-gray-100"}`}>
+                <div className="flex items-start gap-3 mb-3">
+                  <span className="bg-dark text-white text-xs font-bold px-2.5 py-1 rounded-full shrink-0">
+                    {String(a.question_number).padStart(2, "0")}
                   </span>
-                  <p className="text-sm font-medium text-gray-800 flex-1">
-                    {a.question_text}
-                  </p>
+                  <p className="text-sm font-semibold text-dark flex-1">{a.question_text}</p>
                   {aiFlag && (
-                    <span
-                      className={`text-xs px-2 py-1 rounded shrink-0 ${
-                        aiFlag.is_ai_generated
-                          ? "bg-orange-200 text-orange-800"
-                          : "bg-yellow-100 text-yellow-700"
-                      }`}
-                      title={`AI probability: ${Math.round(aiFlag.ai_probability * 100)}%\nIndicators: ${aiFlag.indicators?.join(", ")}`}
-                    >
+                    <span className={`text-[10px] px-2 py-1 rounded-full shrink-0 font-bold uppercase ${aiFlag.is_ai_generated ? "bg-red-100 text-red-600" : "bg-gray-100 text-gray-500"}`}
+                      title={`AI: ${Math.round(aiFlag.ai_probability * 100)}%`}>
                       {aiFlag.is_ai_generated ? "AI-текст" : `AI ${Math.round(aiFlag.ai_probability * 100)}%`}
                     </span>
                   )}
                 </div>
-                <div className="ml-9 bg-gray-50 rounded-lg p-3">
-                  <p className="text-gray-700 text-sm whitespace-pre-wrap">
-                    {a.answer_text}
-                  </p>
+                <div className="ml-10 bg-gray-50 rounded-xl p-4">
+                  <p className="text-gray-600 text-sm whitespace-pre-wrap leading-relaxed">{a.answer_text}</p>
                 </div>
               </div>
             );
           })}
           {dossier.answers.length === 0 && (
-            <p className="text-gray-500 text-center py-4">
-              Ответы не найдены
-            </p>
+            <p className="text-gray-400 text-center py-6">Ответы не найдены</p>
           )}
         </div>
       </div>

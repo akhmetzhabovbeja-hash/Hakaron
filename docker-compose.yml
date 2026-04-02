@@ -40,6 +40,8 @@ services:
       - "8000:8000"
     env_file:
       - .env
+    volumes:
+      - uploads-data:/app/uploads
     depends_on:
       postgres:
         condition: service_healthy
@@ -73,6 +75,22 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  # === Ollama (LLM for essay analysis) ===
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+
   # === AI Detection (SlopTotal) ===
   ai-detection:
     build:
@@ -94,6 +112,18 @@ services:
       start_period: 120s
       retries: 3
 
+  # === Telegram Bot ===
+  telegram-bot:
+    build:
+      context: ./telegram-bot
+      dockerfile: Dockerfile
+    environment:
+      - BOT_TOKEN=8657277109:AAGPSvKgPIhRd6yd2MwDlmRAtksXSfguHN8
+      - API_URL=http://backend:8000/api/v1
+    depends_on:
+      - backend
+    restart: unless-stopped
+
   # === Frontend ===
   frontend:
     build:
@@ -110,3 +140,5 @@ volumes:
   redis_data:
   sloptotal-models:
   sloptotal-data:
+  ollama-data:
+  uploads-data:

@@ -16,8 +16,8 @@ interface StatusData {
 
 const statusSteps = [
   { key: "pending", label: "Ожидание", icon: "01" },
-  { key: "processing", label: "AI-анализ", icon: "02" },
-  { key: "analyzed", label: "HR-рассмотрение", icon: "03" },
+  { key: "processing", label: "Анализ системы", icon: "02" },
+  { key: "analyzed", label: "Рассмотрение координатора", icon: "03" },
   { key: "sent_to_manager", label: "Комиссия", icon: "04" },
   { key: "approved", label: "Зачислен", icon: "05" },
 ];
@@ -142,7 +142,10 @@ export default function CandidateStatusPage() {
       {isRejected && (
         <div className="bg-gray-100 rounded-2xl p-8 mb-10">
           <h3 className="text-3xl font-extrabold text-dark mb-2">К сожалению, не в этот раз</h3>
-          <p className="text-gray-500">Вы можете подать заявку на другую программу.</p>
+          <p className="text-gray-500 mb-4">Программа: {data.vacancy_title}. Вы можете подать заявку на другую программу.</p>
+          <Link to="/vacancies" className="inline-block bg-dark text-white px-6 py-2.5 rounded-full font-semibold hover:bg-gray-800 transition">
+            Посмотреть другие программы
+          </Link>
         </div>
       )}
 

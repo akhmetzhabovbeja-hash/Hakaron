@@ -76,8 +76,11 @@ class MyStatusResponse(BaseModel):
     has_application: bool
     status: str | None = None
     vacancy_title: str | None = None
+    vacancy_id: int | None = None
     total_score: int | None = None
     manager_comment: str | None = None
+    can_apply: bool = True  # can submit new application
+    rejected_vacancy_id: int | None = None  # blocked vacancy after rejection
     # Draft info
     draft_exists: bool = False
     draft_vacancy_id: int | None = None

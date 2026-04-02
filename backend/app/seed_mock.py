@@ -91,7 +91,7 @@ async def seed_mock_data():
             return
 
         # --- 1. Create HR + Manager users ---
-        hr_user = User(name="HR Координатор", email="hr@test.com", phone="87001000001", hashed_password=HASH, role=UserRole.HR)
+        hr_user = User(name="Координатор", email="hr@test.com", phone="87001000001", hashed_password=HASH, role=UserRole.HR)
         manager_user = User(name="Комиссия Председатель", email="manager@test.com", phone="87001000002", hashed_password=HASH, role=UserRole.MANAGER)
         db.add(hr_user)
         db.add(manager_user)

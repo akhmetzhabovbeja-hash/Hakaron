@@ -87,8 +87,20 @@ export default function HrReportCandidateAnalysisPage() {
 
       {/* Summary */}
       <div className="border border-gray-100 rounded-2xl p-6 mb-8">
-        <h3 className="font-bold text-dark mb-2">AI-резюме</h3>
-        <p className="text-gray-600 leading-relaxed">{analysis.summary}</p>
+        <h3 className="font-bold text-dark mb-4">AI-резюме</h3>
+        <div className="space-y-4">
+          {(analysis.summary || "").split("\n\n").map((section, i) => {
+            const lines = section.split("\n");
+            const title = lines[0];
+            const body = lines.slice(1).join("\n");
+            return (
+              <div key={i}>
+                {title && <p className="font-semibold text-dark text-sm mb-1">{title}</p>}
+                {body && <p className="text-gray-600 text-sm leading-relaxed whitespace-pre-wrap">{body}</p>}
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       {/* Manager comment */}

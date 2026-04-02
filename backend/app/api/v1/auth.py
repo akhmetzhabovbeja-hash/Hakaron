@@ -33,6 +33,12 @@ async def get_current_user(
 
 @router.post("/register", response_model=TokenResponse)
 async def register(data: RegisterRequest, db: AsyncSession = Depends(get_db)):
+    # Validate phone format (+7XXXXXXXXXX or 8XXXXXXXXXX)
+    import re
+    phone_clean = re.sub(r'[\s\-\(\)]', '', data.phone)
+    if not re.match(r'^(\+?7|8)\d{10}$', phone_clean):
+        raise HTTPException(status_code=400, detail="Введите казахстанский номер: +7XXXXXXXXXX")
+
     # Check email uniqueness
     existing_email = await db.execute(select(User).where(User.email == data.email))
     if existing_email.scalar_one_or_none():

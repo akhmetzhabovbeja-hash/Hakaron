@@ -11,6 +11,7 @@ interface VacancyDetail {
 interface StatusData {
   has_application: boolean; status: string | null;
   draft_exists: boolean; draft_vacancy_id: number | null; draft_vacancy_title: string | null;
+  can_apply: boolean; rejected_vacancy_id: number | null;
 }
 
 
@@ -47,12 +48,13 @@ export default function VacancyDetailPage() {
   if (loading) return <p className="text-gray-400">Загрузка...</p>;
   if (!vacancy) return <p className="text-red-500">Программа не найдена</p>;
 
-  const hasSubmitted = status?.has_application;
   const hasDraft = status?.draft_exists;
   const draftIsHere = hasDraft && status?.draft_vacancy_id === Number(id);
   const draftElsewhere = hasDraft && status?.draft_vacancy_id !== Number(id);
   const isExpired = vacancy.application_deadline && new Date(vacancy.application_deadline) < new Date();
-  const canApply = !hasSubmitted && !hasDraft && !isExpired;
+  const isRejectedHere = status?.rejected_vacancy_id === Number(id);
+  const hasActiveApplication = status?.has_application && status?.status !== "rejected";
+  const canApply = (status?.can_apply ?? true) && !isExpired && !isRejectedHere;
 
 
   return (
@@ -91,7 +93,14 @@ export default function VacancyDetailPage() {
 
       {/* Action */}
       <div className="border border-gray-100 rounded-2xl p-8 text-center">
-        {hasSubmitted && (
+        {isRejectedHere && (
+          <div>
+            <p className="text-lg font-bold text-red-600 mb-2">Вы получили отказ по этой программе</p>
+            <p className="text-gray-400">Вы можете подать заявку на другую программу</p>
+            <Link to="/vacancies" className="text-sm text-gray-400 hover:text-dark mt-2 inline-block">Посмотреть другие программы &rarr;</Link>
+          </div>
+        )}
+        {hasActiveApplication && !isRejectedHere && (
           <div>
             <p className="text-lg font-bold text-dark mb-2">Вы уже подали заявку</p>
             <Link to="/status" className="text-sm text-gray-400 hover:text-dark">Посмотреть статус &rarr;</Link>
@@ -112,7 +121,7 @@ export default function VacancyDetailPage() {
             <Link to="/status" className="text-sm text-gray-400 hover:text-dark">Перейти к статусу &rarr;</Link>
           </div>
         )}
-        {isExpired && !hasSubmitted && !hasDraft && (
+        {isExpired && !hasActiveApplication && !hasDraft && !isRejectedHere && (
           <p className="text-lg font-bold text-red-600">Приём заявок закрыт</p>
         )}
         {canApply && (

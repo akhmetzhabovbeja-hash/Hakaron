@@ -31,6 +31,8 @@ export default function HrCandidateDossierPage() {
   const avatarSrc = dossier.avatar_url ? `${dossier.avatar_url}` : null;
 
   const explainIndicator = (ind: string): string => {
+    if (ind === "explicit_ai_label") return "Ответ начинается с явной пометки AI-генератора (\"Ответ Gemini\", \"Ответ ChatGPT\" и т.д.). Абитуриент скопировал ответ из AI-чата без редактирования.";
+    if (ind === "copy_pasted_ai_response") return "Текст является прямой копией ответа AI-ассистента. Абитуриент не написал ответ самостоятельно.";
     if (ind.startsWith("ai_phrases_strong:")) {
       const phrases = ind.replace("ai_phrases_strong:", "").split(",").map(p => `"${p.trim()}"`).join(", ");
       return `Обнаружены характерные AI-фразы: ${phrases}. Такие обороты типичны для ChatGPT и Claude — живые люди так почти не пишут.`;
@@ -129,8 +131,20 @@ export default function HrCandidateDossierPage() {
 
       {/* AI summary */}
       <div className="border border-gray-100 rounded-2xl p-6 mb-8">
-        <h3 className="font-bold text-dark mb-2">AI-резюме</h3>
-        <p className="text-gray-600 leading-relaxed">{dossier.summary}</p>
+        <h3 className="font-bold text-dark mb-4">AI-резюме</h3>
+        <div className="space-y-4">
+          {(dossier.summary || "").split("\n\n").map((section, i) => {
+            const lines = section.split("\n");
+            const title = lines[0];
+            const body = lines.slice(1).join("\n");
+            return (
+              <div key={i}>
+                {title && <p className="font-semibold text-dark text-sm mb-1">{title}</p>}
+                {body && <p className="text-gray-600 text-sm leading-relaxed whitespace-pre-wrap">{body}</p>}
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       {/* ID Document */}

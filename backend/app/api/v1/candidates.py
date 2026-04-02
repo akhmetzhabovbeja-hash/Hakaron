@@ -307,12 +307,20 @@ def _russian_rule_score(text: str) -> tuple[float, list[str]]:
 
 
 async def detect_ai_text_async(text: str) -> dict:
-    """Hybrid AI detection: SlopTotal ML engines + Russian rule-based heuristics.
+    """Hybrid AI detection: SlopTotal ML engines + Russian rule-based heuristics."""
+    if not text or len(text.strip()) < 10:
+        return {"is_ai_generated": False, "ai_probability": 0.0, "indicators": []}
 
-    SlopTotal's calibrated score is Fakespot-dominant (English-only).
-    For Russian text we use raw ML scores (BERT-RAID, E5) + our Russian heuristics.
-    """
-    if not text or len(text.strip()) < 50:
+    # Check for explicit AI copy-paste markers
+    text_lower = text.lower().strip()
+    if any(text_lower.startswith(m) for m in ["ответ gemini", "ответ chatgpt", "ответ claude", "ответ gpt", "answer by"]):
+        return {
+            "is_ai_generated": True,
+            "ai_probability": 0.95,
+            "indicators": ["explicit_ai_label", "copy_pasted_ai_response"],
+        }
+
+    if len(text.strip()) < 50:
         return {"is_ai_generated": False, "ai_probability": 0.0, "indicators": []}
 
     # Step 1: Russian rule-based score
@@ -595,15 +603,26 @@ async def start_application(
     if existing_draft:
         raise HTTPException(status_code=400, detail="У вас уже есть незавершённая заявка")
 
-    # Check no submitted application
-    submitted = await db.execute(
+    # Check no active (non-rejected) application
+    active = await db.execute(
         select(CandidateProfile)
         .join(CandidateAnalysis, CandidateAnalysis.candidate_id == CandidateProfile.id)
         .where(CandidateProfile.user_id == current_user.id)
-        .where(CandidateAnalysis.status != AnalysisStatus.DRAFT)
+        .where(CandidateAnalysis.status.not_in([AnalysisStatus.DRAFT, AnalysisStatus.REJECTED]))
     )
-    if submitted.scalar_one_or_none():
+    if active.scalar_one_or_none():
         raise HTTPException(status_code=400, detail="Вы уже подали заявку")
+
+    # Check not applying to a program where already rejected
+    rejected = await db.execute(
+        select(CandidateProfile)
+        .join(CandidateAnalysis, CandidateAnalysis.candidate_id == CandidateProfile.id)
+        .where(CandidateProfile.user_id == current_user.id)
+        .where(CandidateProfile.vacancy_id == data.vacancy_id)
+        .where(CandidateAnalysis.status == AnalysisStatus.REJECTED)
+    )
+    if rejected.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="Вы уже получили отказ по этой программе")
 
     # Check vacancy
     vacancy = (await db.execute(select(Vacancy).where(Vacancy.id == data.vacancy_id))).scalar_one_or_none()
@@ -815,9 +834,8 @@ async def submit_application(
     vq_rows = vq_result.all()
     q_by_order = {vq.order: q for vq, q in vq_rows}
 
-    # AI detection + scoring
+    # Step 1: AI text detection (fast, SlopTotal + rules)
     ai_flags = []
-    answer_data_for_scoring = []
     for ans in saved_answers:
         detection = await detect_ai_text_async(ans.answer_text)
         if detection["is_ai_generated"] or detection["ai_probability"] > 0.3:
@@ -828,36 +846,18 @@ async def submit_application(
                 "indicators": detection["indicators"],
             })
 
-        q = q_by_order.get(ans.question_number)
-        answer_data_for_scoring.append({
-            "question_number": ans.question_number,
-            "answer_text": ans.answer_text,
-            "category": q.category.value if q else "experience",
-        })
-
-    category_scores, total_score, strengths, weaknesses, summary = compute_category_scores(
-        answer_data_for_scoring, ai_flags
-    )
-
-    vacancy_match = round(total_score / 100, 2)
-    gp_score = category_scores.get("growth_path", {}).get("score", 50)
-    growth_potential = "A" if total_score >= 80 else "B" if total_score >= 60 else "C"
-
-    # Update analysis from DRAFT → ANALYZED
-    analysis.status = AnalysisStatus.ANALYZED
-    analysis.total_score = total_score
-    analysis.vacancy_match = vacancy_match
-    analysis.growth_potential = growth_potential
-    analysis.growth_path_score = round(gp_score / 100, 2)
-    analysis.strengths = strengths
-    analysis.weaknesses = weaknesses
-    analysis.summary = summary
+    # Save AI flags immediately
     analysis.ai_detection_flags = ai_flags
-    analysis.category_scores = category_scores
 
+    # Step 2: Set status to PENDING → Celery will pick up for LLM analysis
+    analysis.status = AnalysisStatus.PENDING
     await db.commit()
 
-    return {"message": "Заявка отправлена на AI-проверку", "analysis_id": analysis.id, "total_score": total_score}
+    # Step 3: Kick off async LLM analysis via Celery
+    from app.tasks.analysis import analyze_candidate_task
+    analyze_candidate_task.delay(analysis.id)
+
+    return {"message": "Заявка отправлена. AI-анализ запущен.", "analysis_id": analysis.id}
 
 
 @router.post("/submit-questionnaire")
@@ -993,6 +993,8 @@ async def my_status(
     vacancy = vacancy_result.scalar_one_or_none()
 
     is_draft = analysis and analysis.status == AnalysisStatus.DRAFT
+    is_rejected = analysis and analysis.status == AnalysisStatus.REJECTED
+    is_active = analysis and analysis.status not in (AnalysisStatus.DRAFT, AnalysisStatus.REJECTED)
 
     # Count progress for drafts
     draft_progress = None
@@ -1008,11 +1010,14 @@ async def my_status(
         draft_progress = f"{ans_count}/{q_count}"
 
     return MyStatusResponse(
-        has_application=not is_draft,
+        has_application=is_active or is_rejected,
         status=analysis.status.value if analysis and not is_draft else None,
         vacancy_title=vacancy.title if vacancy and not is_draft else None,
+        vacancy_id=profile.vacancy_id if not is_draft else None,
         total_score=analysis.total_score if analysis and not is_draft else None,
         manager_comment=analysis.manager_comment if analysis and not is_draft else None,
+        can_apply=not is_active and not is_draft,  # can apply if rejected or no application
+        rejected_vacancy_id=profile.vacancy_id if is_rejected else None,
         draft_exists=is_draft,
         draft_vacancy_id=profile.vacancy_id if is_draft else None,
         draft_vacancy_title=vacancy.title if vacancy and is_draft else None,

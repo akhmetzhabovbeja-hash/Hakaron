@@ -205,11 +205,89 @@ export default function ProfilePage() {
         <button
           type="submit"
           disabled={saving}
-          className="w-full bg-primary-600 text-white py-2 rounded-lg hover:bg-primary-700 disabled:opacity-50"
+          className="w-full bg-dark text-white py-3 rounded-xl font-semibold hover:bg-gray-800 disabled:opacity-50 transition"
         >
           {saving ? "Сохранение..." : "Сохранить"}
         </button>
       </form>
+
+      {/* Telegram linking */}
+      <TelegramLink />
+    </div>
+  );
+}
+
+function TelegramLink() {
+  const [code, setCode] = useState<string | null>(null);
+  const [seconds, setSeconds] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [linked, setLinked] = useState(false);
+  const [tgUsername, setTgUsername] = useState<string | null>(null);
+
+  useEffect(() => {
+    apiClient.get("/telegram/link-status").then(({ data }) => {
+      setLinked(data.linked);
+      setTgUsername(data.telegram_username);
+    }).catch(() => {});
+  }, []);
+
+  const generateCode = async () => {
+    setLoading(true);
+    try {
+      const { data } = await apiClient.post("/telegram/generate-code");
+      setCode(data.code);
+      setSeconds(data.expires_in);
+    } catch {} finally { setLoading(false); }
+  };
+
+  useEffect(() => {
+    if (seconds <= 0) { setCode(null); return; }
+    const timer = setInterval(() => {
+      setSeconds(s => {
+        if (s <= 1) {
+          // Check if linked while code was active
+          apiClient.get("/telegram/link-status").then(({ data }) => {
+            if (data.linked) { setLinked(true); setTgUsername(data.telegram_username); }
+          }).catch(() => {});
+        }
+        return s - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [seconds]);
+
+  return (
+    <div className="border border-gray-100 rounded-2xl p-6 mt-8">
+      <h3 className="font-bold text-dark mb-2">Telegram</h3>
+
+      {linked ? (
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-accent flex items-center justify-center text-dark font-bold">TG</div>
+          <div>
+            <p className="text-dark font-medium">Подключён к аккаунту {tgUsername ? `@${tgUsername}` : "Telegram"}</p>
+            <p className="text-gray-400 text-xs">Вы получаете уведомления о статусе заявки</p>
+          </div>
+        </div>
+      ) : (
+        <>
+          <p className="text-gray-400 text-sm mb-4">Привяжите Telegram чтобы получать уведомления о статусе заявки</p>
+          {code && seconds > 0 ? (
+            <div className="text-center">
+              <div className="text-4xl font-extrabold text-dark tracking-[0.3em] mb-2">{code}</div>
+              <p className="text-sm text-gray-400">Введите этот код в Telegram-боте</p>
+              <p className="text-xs text-red-500 mt-1">Истекает через {seconds} сек.</p>
+            </div>
+          ) : (
+            <button
+              onClick={generateCode}
+              disabled={loading}
+              className="bg-dark text-white px-6 py-2.5 rounded-full text-sm font-semibold hover:bg-gray-800 transition disabled:opacity-50"
+            >
+              {loading ? "..." : "Получить код для Telegram"}
+            </button>
+          )}
+        </>
+      )}
     </div>
   );
 }

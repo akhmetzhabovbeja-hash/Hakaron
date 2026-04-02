@@ -9,3 +9,6 @@ celery_app = Celery(
 )
 
 celery_app.autodiscover_tasks(["app.tasks"])
+
+# Explicit imports to ensure tasks are registered
+import app.tasks.analysis  # noqa: F401, E402

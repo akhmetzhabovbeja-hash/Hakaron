@@ -109,6 +109,10 @@ function RegisterForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    const phoneClean = phone.replace(/[\s\-\(\)]/g, "");
+    if (!/^\+?7\d{10}$/.test(phoneClean) && !/^8\d{10}$/.test(phoneClean)) {
+      setError("Введите казахстанский номер: +7XXXXXXXXXX"); return;
+    }
     if (password.length < 8) { setError("Пароль должен содержать минимум 8 символов"); return; }
     setLoading(true);
     try {

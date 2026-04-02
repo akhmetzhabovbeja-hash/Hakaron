@@ -25,6 +25,7 @@ class CandidateProfile(Base):
         Enum(CandidateSource), default=CandidateSource.PLATFORM
     )
     hh_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    id_document_url: Mapped[str | None] = mapped_column(String(500), nullable=True, default=None)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
     )

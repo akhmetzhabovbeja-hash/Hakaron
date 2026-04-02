@@ -6,6 +6,7 @@ import { downloadFile } from "../utils/downloadFile";
 interface CandidateItem {
   id: number; candidate_id: number; full_name: string; email: string;
   vacancy_title: string; total_score: number; vacancy_match: number; status: string; source: string;
+  ai_suspected: boolean; ai_flags_count: number;
 }
 
 const statusLabels: Record<string, { label: string; style: string }> = {
@@ -25,6 +26,7 @@ export default function HrReportVacancyCandidatesPage() {
   const [loading, setLoading] = useState(true);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [search, setSearch] = useState("");
 
   const handleExcelExport = async () => {
     let url = `/hr/vacancies/${id}/report-excel`;
@@ -50,6 +52,13 @@ export default function HrReportVacancyCandidatesPage() {
 
       {/* Filters */}
       <div className="border border-gray-100 rounded-2xl p-5 mb-8 flex items-center gap-4 flex-wrap">
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Поиск по имени..."
+          className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-dark w-52"
+        />
         <div className="flex items-center gap-2">
           <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">От</label>
           <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none" />
@@ -64,20 +73,32 @@ export default function HrReportVacancyCandidatesPage() {
         <span className="text-gray-400 text-sm ml-auto">Абитуриентов: <span className="font-bold text-dark">{candidates.length}</span></span>
       </div>
 
-      {loading ? (
-        <p className="text-gray-400">Загрузка...</p>
-      ) : candidates.length === 0 ? (
-        <div className="text-center py-20"><p className="text-lg font-bold text-dark">Пока нет абитуриентов</p></div>
-      ) : (
-        <div className="grid gap-3">
-          {candidates.map((c, idx) => {
+      {(() => {
+        const searchLower = search.toLowerCase();
+        const filtered = candidates.filter((c) =>
+          !search || c.full_name.toLowerCase().includes(searchLower) || c.email.toLowerCase().includes(searchLower)
+        );
+        return loading ? (
+          <p className="text-gray-400">Загрузка...</p>
+        ) : filtered.length === 0 ? (
+          <div className="text-center py-20"><p className="text-lg font-bold text-dark">{search ? `Ничего не найдено по "${search}"` : "Пока нет абитуриентов"}</p></div>
+        ) : (
+          <div className="grid gap-3">
+            {filtered.map((c, idx) => {
             const st = statusLabels[c.status] || statusLabels.pending;
             return (
-              <Link key={c.id} to={`/hr/reports/candidate/${c.id}`} className="group border border-gray-100 rounded-2xl p-5 flex items-center justify-between hover:border-dark transition">
+              <Link key={c.id} to={`/hr/reports/candidate/${c.id}`} className={`group border rounded-2xl p-5 flex items-center justify-between hover:border-dark transition ${c.ai_suspected ? "border-red-200 bg-red-50/30" : "border-gray-100"}`}>
                 <div className="flex items-start gap-4">
                   <span className="text-xs font-bold text-gray-300 tracking-widest mt-1">{String(idx + 1).padStart(2, "0")}</span>
                   <div>
-                    <h3 className="font-bold text-dark">{c.full_name}</h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-bold text-dark">{c.full_name}</h3>
+                      {c.ai_suspected && (
+                        <span className="text-[10px] font-bold uppercase tracking-wide bg-red-100 text-red-600 px-2 py-0.5 rounded-full">
+                          AI ({c.ai_flags_count})
+                        </span>
+                      )}
+                    </div>
                     <p className="text-gray-400 text-sm">{c.email}</p>
                   </div>
                 </div>
@@ -89,8 +110,9 @@ export default function HrReportVacancyCandidatesPage() {
               </Link>
             );
           })}
-        </div>
-      )}
+          </div>
+        );
+      })()}
     </div>
   );
 }

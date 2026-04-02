@@ -8,6 +8,7 @@ from app.core.database import Base
 
 
 class AnalysisStatus(str, enum.Enum):
+    DRAFT = "draft"
     PENDING = "pending"
     PROCESSING = "processing"
     ANALYZED = "analyzed"

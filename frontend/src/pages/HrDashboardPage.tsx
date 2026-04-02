@@ -106,35 +106,7 @@ export default function HrDashboardPage() {
         </div>
       )}
 
-      <HrAnalyzedCandidates />
     </div>
   );
 }
 
-function HrAnalyzedCandidates() {
-  const [candidates, setCandidates] = useState<{ id: number; full_name: string; vacancy_title: string; total_score: number; status: string; }[]>([]);
-  useEffect(() => { apiClient.get("/hr/candidates").then((res) => setCandidates(res.data)).catch(() => {}); }, []);
-  if (candidates.length === 0) return null;
-
-  return (
-    <div className="mt-14">
-      <h2 className="text-2xl font-extrabold text-dark mb-6">Абитуриенты после AI-анализа ({candidates.length})</h2>
-      <div className="grid gap-3">
-        {candidates.map((c) => (
-          <Link key={c.id} to={`/hr/candidates/${c.id}`} className="group border border-gray-100 rounded-xl p-5 flex items-center justify-between hover:border-dark hover:shadow-sm transition">
-            <div>
-              <span className="font-semibold text-dark">{c.full_name}</span>
-              <span className="text-gray-400 ml-3 text-sm">{c.vacancy_title}</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <span className={`px-3 py-1 rounded-full font-bold text-sm ${c.total_score >= 80 ? "text-green-600 bg-green-50" : c.total_score >= 60 ? "text-yellow-600 bg-yellow-50" : "text-red-600 bg-red-50"}`}>
-                {c.total_score}/100
-              </span>
-              <span className="text-gray-300 group-hover:text-dark">&rarr;</span>
-            </div>
-          </Link>
-        ))}
-      </div>
-    </div>
-  );
-}

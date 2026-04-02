@@ -6,9 +6,11 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import AuthPage from "./pages/AuthPage";
 import VacanciesPage from "./pages/VacanciesPage";
 import CandidateQuestionnairePage from "./pages/CandidateQuestionnairePage";
+import VacancyDetailPage from "./pages/VacancyDetailPage";
 import CandidateStatusPage from "./pages/CandidateStatusPage";
 import ManagerDashboardPage from "./pages/ManagerDashboardPage";
 import ManagerCandidateDetailPage from "./pages/ManagerCandidateDetailPage";
+import ManagerCandidateDossierPage from "./pages/ManagerCandidateDossierPage";
 import HrDashboardPage from "./pages/HrDashboardPage";
 import HrVacancyCreatePage from "./pages/HrVacancyCreatePage";
 import HrVacancyDetailPage from "./pages/HrVacancyDetailPage";
@@ -19,7 +21,9 @@ import HrReportsPage from "./pages/HrReportsPage";
 import HrReportVacancyCandidatesPage from "./pages/HrReportVacancyCandidatesPage";
 import HrReportCandidateAnalysisPage from "./pages/HrReportCandidateAnalysisPage";
 import HrCandidateDossierPage from "./pages/HrCandidateDossierPage";
+import HrApplicationsPage from "./pages/HrApplicationsPage";
 import HrStatisticsPage from "./pages/HrStatisticsPage";
+import HrAiDetectPage from "./pages/HrAiDetectPage";
 
 function RootRedirect() {
   const { isAuthenticated, isLoading, getDefaultRoute } = useAuthStore();
@@ -66,6 +70,14 @@ function App() {
           }
         />
         <Route
+          path="vacancy/:id"
+          element={
+            <ProtectedRoute allowedRoles={["candidate"]}>
+              <VacancyDetailPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="questionnaire/:vacancyId"
           element={
             <ProtectedRoute allowedRoles={["candidate"]}>
@@ -96,6 +108,14 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={["manager"]}>
               <ManagerCandidateDetailPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="manager/candidate/:id/dossier"
+          element={
+            <ProtectedRoute allowedRoles={["manager"]}>
+              <ManagerCandidateDossierPage />
             </ProtectedRoute>
           }
         />
@@ -134,6 +154,14 @@ function App() {
           }
         />
         <Route
+          path="hr/applications"
+          element={
+            <ProtectedRoute allowedRoles={["hr"]}>
+              <HrApplicationsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="hr/approved"
           element={
             <ProtectedRoute allowedRoles={["hr"]}>
@@ -142,6 +170,14 @@ function App() {
           }
         />
 
+        <Route
+          path="hr/ai-detect"
+          element={
+            <ProtectedRoute allowedRoles={["hr"]}>
+              <HrAiDetectPage />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="hr/statistics"
           element={

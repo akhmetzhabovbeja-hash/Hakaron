@@ -63,6 +63,11 @@ async def lifespan(app: FastAPI):
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     await seed_system_questions()
+
+    # Seed mock data (15 students, 3 programs)
+    from app.seed_mock import seed_mock_data
+    await seed_mock_data()
+
     yield
 
 
@@ -87,6 +92,7 @@ app.include_router(api_v1_router, prefix="/api")
 # Serve uploaded files (avatars, etc.)
 import os
 os.makedirs("/app/uploads/avatars", exist_ok=True)
+os.makedirs("/app/uploads/documents", exist_ok=True)
 app.mount("/uploads", StaticFiles(directory="/app/uploads"), name="uploads")
 
 

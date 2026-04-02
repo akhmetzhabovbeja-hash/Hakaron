@@ -15,17 +15,9 @@ export default function HrReportCandidateAnalysisPage() {
   const { id } = useParams();
   const [analysis, setAnalysis] = useState<AnalysisDetail | null>(null);
   const [loading, setLoading] = useState(true);
-  const [sending, setSending] = useState(false);
-
   useEffect(() => {
     apiClient.get(`/hr/candidates/${id}`).then((res) => setAnalysis(res.data)).catch(() => {}).finally(() => setLoading(false));
   }, [id]);
-
-  const sendToManager = async () => {
-    setSending(true);
-    try { await apiClient.post(`/hr/candidates/${id}/send-to-manager`); const res = await apiClient.get(`/hr/candidates/${id}`); setAnalysis(res.data); }
-    catch { alert("Ошибка отправки"); } finally { setSending(false); }
-  };
 
   if (loading) return <p className="text-gray-400">Загрузка...</p>;
   if (!analysis) return <p className="text-red-500">Абитуриент не найден</p>;
@@ -107,25 +99,22 @@ export default function HrReportCandidateAnalysisPage() {
         </div>
       )}
 
-      {/* Actions */}
+      {/* Actions — reports only: view dossier + status badge */}
       <div className="flex gap-4">
         <Link to={`/hr/reports/candidate/${id}/dossier`} className="flex-1 text-center bg-gray-100 text-dark py-3.5 rounded-xl hover:bg-gray-200 font-semibold transition">
           Открыть досье
         </Link>
-        {analysis.status === "analyzed" && (
-          <button onClick={sendToManager} disabled={sending} className="flex-1 bg-dark text-white py-3.5 rounded-xl hover:bg-gray-800 disabled:opacity-50 font-semibold transition">
-            {sending ? "Отправка..." : "Отправить в комиссию"}
-          </button>
-        )}
-        {analysis.status === "sent_to_manager" && (
-          <div className="flex-1 text-center py-3.5 bg-dark/5 text-dark rounded-xl font-medium">Отправлен в комиссию</div>
-        )}
-        {analysis.status === "approved" && (
-          <div className="flex-1 text-center py-3.5 bg-accent text-dark rounded-xl font-bold">Зачислен комиссией</div>
-        )}
-        {analysis.status === "rejected" && (
-          <div className="flex-1 text-center py-3.5 bg-red-50 text-red-600 rounded-xl font-medium">Отклонён</div>
-        )}
+        <div className={`flex-1 text-center py-3.5 rounded-xl font-medium ${
+          analysis.status === "approved" ? "bg-accent text-dark font-bold" :
+          analysis.status === "rejected" ? "bg-red-50 text-red-600" :
+          analysis.status === "sent_to_manager" ? "bg-dark/5 text-dark" :
+          "bg-gray-50 text-gray-500"
+        }`}>
+          {analysis.status === "approved" ? "Зачислен" :
+           analysis.status === "rejected" ? "Отклонён" :
+           analysis.status === "sent_to_manager" ? "У комиссии" :
+           analysis.status === "analyzed" ? "На рассмотрении" : analysis.status}
+        </div>
       </div>
     </div>
   );

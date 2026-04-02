@@ -17,6 +17,7 @@ const roleNav: Record<string, { to: string; label: string }[]> = {
   ],
   hr: [
     { to: "/hr", label: "Программы" },
+    { to: "/hr/applications", label: "Заявки" },
     { to: "/hr/reports", label: "Отчёты" },
     { to: "/hr/statistics", label: "Статистика" },
     { to: "/hr/approved", label: "Одобренные" },
@@ -80,7 +81,7 @@ export default function MainLayout() {
                 >
                   {user.avatar_url ? (
                     <img
-                      src={`http://localhost:8000${user.avatar_url}`}
+                      src={`${user.avatar_url}`}
                       alt=""
                       className="w-7 h-7 rounded-full object-cover"
                     />

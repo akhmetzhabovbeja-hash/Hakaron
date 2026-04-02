@@ -95,7 +95,7 @@ export default function ProfilePage() {
   if (!profile) return <p className="text-red-500">Ошибка загрузки профиля</p>;
 
   const avatarSrc = profile.avatar_url
-    ? `http://localhost:8000${profile.avatar_url}`
+    ? `${profile.avatar_url}`
     : null;
 
   return (

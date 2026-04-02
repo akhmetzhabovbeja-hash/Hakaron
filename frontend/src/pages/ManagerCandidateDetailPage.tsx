@@ -60,10 +60,18 @@ export default function ManagerCandidateDetailPage() {
         &larr; Назад к списку
       </Link>
 
-      <h2 className="text-3xl font-bold mt-4 mb-2">{analysis.full_name}</h2>
-      <p className="text-gray-500 mb-6">
-        {analysis.email} &middot; {analysis.vacancy_title}
-      </p>
+      <div className="flex items-start justify-between mt-4 mb-6">
+        <div>
+          <h2 className="text-3xl font-bold">{analysis.full_name}</h2>
+          <p className="text-gray-500">{analysis.email} &middot; {analysis.vacancy_title}</p>
+        </div>
+        <Link
+          to={`/manager/candidate/${id}/dossier`}
+          className="bg-gray-100 text-dark px-5 py-2.5 rounded-full text-sm font-semibold hover:bg-gray-200 transition"
+        >
+          Досье
+        </Link>
+      </div>
 
       <div className="grid grid-cols-3 gap-6 mb-6">
         <div className="bg-white rounded-xl shadow p-6 text-center">

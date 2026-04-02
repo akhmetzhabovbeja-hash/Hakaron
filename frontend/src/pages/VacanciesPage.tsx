@@ -116,7 +116,7 @@ export default function VacanciesPage() {
                     </div>
                   ) : (
                     <Link
-                      to={`/questionnaire/${v.id}`}
+                      to={`/vacancy/${v.id}`}
                       className="shrink-0 px-6 py-3 bg-dark text-white rounded-full text-sm font-semibold hover:bg-gray-800 transition group-hover:bg-accent group-hover:text-dark"
                     >
                       Подать заявку

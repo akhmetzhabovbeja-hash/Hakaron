@@ -1,7 +1,10 @@
 import io
 import os
+import logging
 from datetime import datetime, timezone, date, time
 
+import httpx
+from pydantic import BaseModel as PydanticBaseModel
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy import select, or_, func
@@ -36,6 +39,24 @@ def _require_hr(user: User) -> None:
     """Raise 403 if the user is not an HR."""
     if user.role != UserRole.HR:
         raise HTTPException(status_code=403, detail="HR role required")
+
+
+def _build_candidate_list(analysis, profile, vacancy) -> CandidateListResponse:
+    flags = analysis.ai_detection_flags or []
+    ai_count = len([f for f in flags if f.get("is_ai_generated")])
+    return CandidateListResponse(
+        id=analysis.id,
+        candidate_id=profile.id,
+        full_name=profile.full_name,
+        email=profile.email,
+        vacancy_title=vacancy.title,
+        total_score=analysis.total_score,
+        vacancy_match=analysis.vacancy_match,
+        status=analysis.status.value,
+        source=profile.source.value,
+        ai_flags_count=len(flags),
+        ai_suspected=ai_count > 0,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -350,32 +371,42 @@ async def assign_questions_to_vacancy(
 
 @router.get("/candidates", response_model=list[CandidateListResponse])
 async def list_analyzed_candidates(
+    search: str | None = Query(None),
+    status_filter: str | None = Query(None),
+    sort_by: str = Query("score"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """List candidates with ANALYZED status (ready for HR review)."""
     _require_hr(current_user)
-    result = await db.execute(
+
+    stmt = (
         select(CandidateAnalysis, CandidateProfile, Vacancy)
         .join(CandidateProfile, CandidateAnalysis.candidate_id == CandidateProfile.id)
         .join(Vacancy, CandidateAnalysis.vacancy_id == Vacancy.id)
         .where(CandidateAnalysis.status == AnalysisStatus.ANALYZED)
-        .order_by(CandidateAnalysis.total_score.desc())
     )
+
+    if search:
+        stmt = stmt.where(
+            CandidateProfile.full_name.ilike(f"%{search}%")
+            | CandidateProfile.email.ilike(f"%{search}%")
+        )
+
+    if sort_by == "score":
+        stmt = stmt.order_by(CandidateAnalysis.total_score.desc())
+    elif sort_by == "date":
+        stmt = stmt.order_by(CandidateAnalysis.created_at.desc())
+    elif sort_by == "name":
+        stmt = stmt.order_by(CandidateProfile.full_name)
+    else:
+        stmt = stmt.order_by(CandidateAnalysis.total_score.desc())
+
+    result = await db.execute(stmt)
     rows = result.all()
 
     return [
-        CandidateListResponse(
-            id=analysis.id,
-            candidate_id=profile.id,
-            full_name=profile.full_name,
-            email=profile.email,
-            vacancy_title=vacancy.title,
-            total_score=analysis.total_score,
-            vacancy_match=analysis.vacancy_match,
-            status=analysis.status.value,
-            source=profile.source.value,
-        )
+        _build_candidate_list(analysis, profile, vacancy)
         for analysis, profile, vacancy in rows
     ]
 
@@ -449,6 +480,28 @@ async def send_to_manager(
     return {"message": "Candidate sent to manager for review", "analysis_id": analysis_id}
 
 
+@router.post("/candidates/{analysis_id}/reject")
+async def hr_reject_candidate(
+    analysis_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """HR rejects candidate (does not pass to commission)."""
+    _require_hr(current_user)
+    result = await db.execute(
+        select(CandidateAnalysis).where(CandidateAnalysis.id == analysis_id)
+    )
+    analysis = result.scalar_one_or_none()
+    if not analysis:
+        raise HTTPException(status_code=404, detail="Analysis not found")
+
+    analysis.status = AnalysisStatus.REJECTED
+    analysis.hr_reviewed_by = current_user.id
+    await db.commit()
+
+    return {"message": "Candidate rejected by HR", "analysis_id": analysis_id}
+
+
 # ---------------------------------------------------------------------------
 # Approved candidates
 # ---------------------------------------------------------------------------
@@ -471,17 +524,7 @@ async def list_approved_candidates(
     rows = result.all()
 
     return [
-        CandidateListResponse(
-            id=analysis.id,
-            candidate_id=profile.id,
-            full_name=profile.full_name,
-            email=profile.email,
-            vacancy_title=vacancy.title,
-            total_score=analysis.total_score,
-            vacancy_match=analysis.vacancy_match,
-            status=analysis.status.value,
-            source=profile.source.value,
-        )
+        _build_candidate_list(analysis, profile, vacancy)
         for analysis, profile, vacancy in rows
     ]
 
@@ -576,17 +619,7 @@ async def list_vacancy_candidates(
     rows = result.all()
 
     return [
-        CandidateListResponse(
-            id=analysis.id,
-            candidate_id=profile.id,
-            full_name=profile.full_name,
-            email=profile.email,
-            vacancy_title=vacancy.title,
-            total_score=analysis.total_score,
-            vacancy_match=analysis.vacancy_match,
-            status=analysis.status.value,
-            source=profile.source.value,
-        )
+        _build_candidate_list(analysis, profile, vacancy)
         for analysis, profile, vacancy in rows
     ]
 
@@ -638,6 +671,7 @@ async def get_candidate_dossier(
         phone=user.phone,
         bio=user.bio,
         avatar_url=user.avatar_url,
+        id_document_url=profile.id_document_url,
         total_score=analysis.total_score,
         vacancy_match=analysis.vacancy_match,
         growth_potential=analysis.growth_potential,
@@ -801,7 +835,23 @@ async def get_candidate_report_pdf(
             else:
                 elements.append(Paragraph(f"• {flag}", bullet_style))
 
-    # 8. Answers
+    # 8. ID Document
+    if profile.id_document_url:
+        elements.append(Paragraph("Удостоверение личности", heading_style))
+        id_path = f"/app{profile.id_document_url}"
+        if os.path.exists(id_path):
+            from reportlab.platypus import Image
+            try:
+                img = Image(id_path, width=80 * mm, height=50 * mm)
+                img.hAlign = "LEFT"
+                elements.append(img)
+            except Exception:
+                elements.append(Paragraph(f"Файл: {profile.id_document_url}", small_style))
+        else:
+            elements.append(Paragraph(f"Файл загружен: {profile.id_document_url}", small_style))
+        elements.append(Spacer(1, 4 * mm))
+
+    # 9. Answers
     if answers:
         elements.append(Paragraph("Ответы на вопросы", heading_style))
         for a in answers:
@@ -984,3 +1034,66 @@ async def get_vacancy_report_excel(
             "Content-Disposition": f'attachment; filename="report_{vacancy_id}.xlsx"',
         },
     )
+
+
+# ---------------------------------------------------------------------------
+# AI Detection (SlopTotal integration)
+# ---------------------------------------------------------------------------
+
+SLOPTOTAL_URL = "http://ai-detection:8000"
+
+
+class AiDetectRequest(PydanticBaseModel):
+    text: str
+
+
+@router.post("/ai-detect")
+async def ai_detect_text(
+    body: AiDetectRequest,
+    current_user: User = Depends(get_current_user),
+):
+    """Hybrid AI detection: SlopTotal ML + Russian heuristics (HR only)."""
+    _require_hr(current_user)
+
+    if len(body.text.strip()) < 50:
+        raise HTTPException(status_code=400, detail="Текст должен быть не менее 50 символов")
+
+    from app.api.v1.candidates import detect_ai_text_async
+    result = await detect_ai_text_async(body.text)
+
+    # Verdict mapping
+    prob = result.get("ai_probability", 0)
+    if prob >= 0.7:
+        verdict = "AI-текст"
+    elif prob >= 0.41:
+        verdict = "Подозрительный"
+    else:
+        verdict = "Человеческий"
+
+    return {
+        "source": "hybrid_ml+ru",
+        "score": round(prob * 100, 1),
+        "verdict": verdict,
+        "ai_probability": prob,
+        "is_ai_generated": result.get("is_ai_generated", False),
+        "indicators": result.get("indicators", []),
+        "ml_scores": result.get("ml_scores"),
+        "russian_rule_score": result.get("russian_rule_score", 0),
+        "sloptotal_engines": result.get("sloptotal_engines", []),
+    }
+
+
+@router.get("/ai-detect/status")
+async def ai_detect_status(
+    current_user: User = Depends(get_current_user),
+):
+    """Check SlopTotal service health."""
+    _require_hr(current_user)
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            resp = await client.get(f"{SLOPTOTAL_URL}/health")
+            if resp.status_code == 200:
+                return {"status": "online", "details": resp.json()}
+    except Exception:
+        pass
+    return {"status": "offline"}

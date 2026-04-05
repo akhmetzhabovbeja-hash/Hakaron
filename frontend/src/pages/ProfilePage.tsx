@@ -112,7 +112,7 @@ export default function ProfilePage() {
               className="w-24 h-24 rounded-full object-cover border-2 border-gray-200"
             />
           ) : (
-            <div className="w-24 h-24 rounded-full bg-primary-100 flex items-center justify-center text-primary-600 text-3xl font-bold">
+            <div className="w-24 h-24 rounded-full bg-accent/20 flex items-center justify-center text-dark text-3xl font-bold">
               {profile.name.charAt(0).toUpperCase()}
             </div>
           )}
@@ -120,11 +120,11 @@ export default function ProfilePage() {
         <div>
           <p className="font-semibold text-lg">{profile.name}</p>
           <p className="text-gray-500 text-sm">{profile.email}</p>
-          <span className="inline-block mt-1 px-2 py-0.5 bg-primary-100 text-primary-700 rounded text-xs">
+          <span className="inline-block mt-1 px-2 py-0.5 bg-accent text-dark rounded text-xs">
             {roleLabels[profile.role] || profile.role}
           </span>
           <div className="mt-3">
-            <label className="cursor-pointer text-primary-600 hover:text-primary-700 text-sm font-medium">
+            <label className="cursor-pointer text-dark hover:text-gray-600 text-sm font-medium">
               {uploading ? "Загрузка..." : "Изменить фото"}
               <input
                 type="file"
@@ -159,7 +159,7 @@ export default function ProfilePage() {
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary-500"
+            className="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-dark"
             required
           />
         </div>
@@ -172,7 +172,7 @@ export default function ProfilePage() {
             type="tel"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
-            className="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary-500"
+            className="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-dark"
             required
           />
         </div>
@@ -197,7 +197,7 @@ export default function ProfilePage() {
           <textarea
             value={bio}
             onChange={(e) => setBio(e.target.value)}
-            className="w-full border rounded-lg px-4 py-2 h-28 focus:ring-2 focus:ring-primary-500"
+            className="w-full border rounded-lg px-4 py-2 h-28 focus:ring-2 focus:ring-dark"
             placeholder="Расскажите о себе..."
           />
         </div>

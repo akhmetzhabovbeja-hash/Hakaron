@@ -23,6 +23,7 @@ import HrReportCandidateAnalysisPage from "./pages/HrReportCandidateAnalysisPage
 import HrCandidateDossierPage from "./pages/HrCandidateDossierPage";
 import HrApplicationsPage from "./pages/HrApplicationsPage";
 import HrStatisticsPage from "./pages/HrStatisticsPage";
+import HrProactivePage from "./pages/HrProactivePage";
 import HrAiDetectPage from "./pages/HrAiDetectPage";
 
 function RootRedirect() {
@@ -175,6 +176,14 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={["hr"]}>
               <HrAiDetectPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="hr/proactive"
+          element={
+            <ProtectedRoute allowedRoles={["hr"]}>
+              <HrProactivePage />
             </ProtectedRoute>
           }
         />

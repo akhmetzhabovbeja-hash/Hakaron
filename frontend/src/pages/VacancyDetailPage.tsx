@@ -22,6 +22,7 @@ export default function VacancyDetailPage() {
   const [status, setStatus] = useState<StatusData | null>(null);
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState(false);
+  const [agreed, setAgreed] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -126,10 +127,26 @@ export default function VacancyDetailPage() {
         )}
         {canApply && (
           <div>
-            <p className="text-gray-500 mb-6">Нажмите чтобы начать заполнение анкеты из {vacancy.questions.length} вопросов</p>
+            <div className="text-left bg-gray-50 rounded-xl p-5 mb-6 max-w-xl mx-auto">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Согласие на обработку данных</p>
+              <p className="text-sm text-gray-500 leading-relaxed mb-4">
+                Нажимая «Подать заявку», вы подтверждаете, что:
+              </p>
+              <ul className="text-sm text-gray-500 space-y-2 mb-4">
+                <li className="flex gap-2"><span className="text-dark">•</span> Ваши ответы будут обработаны для оценки вашей заявки</li>
+                <li className="flex gap-2"><span className="text-dark">•</span> Данные будут доступны координатору отбора и приёмной комиссии inVision U</li>
+                <li className="flex gap-2"><span className="text-dark">•</span> Ответы проверяются на аутентичность — использование AI-генераторов снижает оценку</li>
+                <li className="flex gap-2"><span className="text-dark">•</span> Загруженное удостоверение личности используется только для верификации</li>
+                <li className="flex gap-2"><span className="text-dark">•</span> Финальное решение всегда принимает человек, а не алгоритм</li>
+              </ul>
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-0.5 w-4 h-4 accent-dark" />
+                <span className="text-sm text-dark font-medium">Я согласен(на) с условиями обработки данных</span>
+              </label>
+            </div>
             <button
               onClick={startApplication}
-              disabled={starting}
+              disabled={starting || !agreed}
               className="bg-dark text-white px-10 py-4 rounded-full text-lg font-bold hover:bg-accent hover:text-dark transition disabled:opacity-50"
             >
               {starting ? "Создание..." : "Подать заявку"}

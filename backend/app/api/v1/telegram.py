@@ -8,10 +8,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.api.v1.auth import get_current_user
+import httpx
+import logging
+
+logger = logging.getLogger(__name__)
 from app.models.user import User, UserRole
 from app.models.analysis import CandidateAnalysis, AnalysisStatus
 from app.models.candidate import CandidateProfile
 from app.models.vacancy import Vacancy
+from app.models.proactive import ProactiveSurvey
 
 router = APIRouter()
 
@@ -239,3 +244,251 @@ async def unlink_telegram(
     user.telegram_id = None
     await db.commit()
     return {"success": True}
+
+
+# ============================================================
+# Proactive Talent Search — Survey from Telegram Bot
+# ============================================================
+
+ML_SERVICE_URL = "http://ml-service:8001"
+
+PROACTIVE_SYSTEM_PROMPT_QUESTIONS = [
+    "leadership",    # Q1: organized something
+    "motivation",    # Q2: why higher education
+    "growth_path",   # Q3: learned something new
+    "potential",     # Q4: project with 1M tenge
+    "experience",    # Q5: main failure
+]
+
+
+class SurveyAnswerItem(BaseModel):
+    question: str
+    answer: str
+
+
+class SubmitSurveyRequest(BaseModel):
+    telegram_id: int
+    telegram_username: str = ""
+    name: str
+    phone: str
+    answers: list[SurveyAnswerItem]
+
+
+@router.get("/survey-check")
+async def check_survey(
+    telegram_id: int = Query(...),
+    db: AsyncSession = Depends(get_db),
+):
+    """Check if user already completed a survey."""
+    result = await db.execute(
+        select(ProactiveSurvey).where(ProactiveSurvey.telegram_id == telegram_id)
+    )
+    survey = result.scalar_one_or_none()
+    if survey:
+        return {"completed": True, "score": survey.total_score, "status": survey.status}
+    return {"completed": False}
+
+
+@router.post("/submit-survey")
+async def submit_survey(
+    data: SubmitSurveyRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Submit proactive survey from Telegram bot → LLM analysis."""
+
+    # Save survey
+    survey = ProactiveSurvey(
+        telegram_id=data.telegram_id,
+        telegram_username=data.telegram_username,
+        name=data.name,
+        phone=data.phone,
+        answers=[{"question": a.question, "answer": a.answer} for a in data.answers],
+    )
+    db.add(survey)
+    await db.flush()
+
+    # Call ML service for quick analysis
+    try:
+        ml_answers = [
+            {
+                "question_number": i + 1,
+                "question_text": a.question,
+                "answer_text": a.answer,
+            }
+            for i, a in enumerate(data.answers)
+        ]
+
+        async with httpx.AsyncClient(timeout=300.0) as client:
+            resp = await client.post(
+                f"{ML_SERVICE_URL}/api/v1/analyze",
+                json={
+                    "candidate_id": survey.id,
+                    "vacancy_id": 0,
+                    "answers": ml_answers,
+                },
+            )
+
+            if resp.status_code == 200:
+                result = resp.json()
+                score = result.get("total_score", 50)
+                # Check if it's a real analysis (not fallback)
+                has_categories = bool(result.get("category_scores"))
+                survey.total_score = score
+                survey.analysis = {
+                    "category_scores": result.get("category_scores"),
+                    "strengths": result.get("strengths", []),
+                    "weaknesses": result.get("weaknesses", []),
+                    "summary": result.get("summary", ""),
+                    "leadership_assessment": result.get("leadership_assessment"),
+                    "growth_trajectory": result.get("growth_trajectory"),
+                    "predictive_score": result.get("predictive_score"),
+                    "predictive_summary": result.get("predictive_summary"),
+                }
+                survey.status = "analyzed" if has_categories else "pending"
+            else:
+                logger.error(f"ML service returned {resp.status_code}")
+                survey.total_score = 0
+                survey.status = "pending"
+
+    except Exception as e:
+        logger.error(f"ML analysis for survey failed: {e}")
+        survey.total_score = 0
+        survey.status = "pending"
+
+    await db.commit()
+
+    return {
+        "success": True,
+        "score": survey.total_score,
+        "status": survey.status,
+    }
+
+
+@router.post("/proactive-surveys/{survey_id}/analyze")
+async def analyze_proactive_survey(
+    survey_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Manually trigger LLM analysis for a proactive survey."""
+    if current_user.role != UserRole.HR:
+        raise HTTPException(status_code=403, detail="HR only")
+
+    survey = (await db.execute(select(ProactiveSurvey).where(ProactiveSurvey.id == survey_id))).scalar_one_or_none()
+    if not survey:
+        raise HTTPException(status_code=404, detail="Survey not found")
+
+    # Call ML service
+    ml_answers = [
+        {"question_number": i + 1, "question_text": a["question"], "answer_text": a["answer"]}
+        for i, a in enumerate(survey.answers or [])
+    ]
+
+    try:
+        async with httpx.AsyncClient(timeout=120.0) as client:
+            resp = await client.post(
+                f"{ML_SERVICE_URL}/api/v1/analyze",
+                json={"candidate_id": survey.id, "vacancy_id": 0, "answers": ml_answers},
+            )
+            if resp.status_code == 200:
+                result = resp.json()
+                survey.total_score = result.get("total_score", 50)
+                survey.analysis = {
+                    "category_scores": result.get("category_scores"),
+                    "strengths": result.get("strengths", []),
+                    "weaknesses": result.get("weaknesses", []),
+                    "summary": result.get("summary", ""),
+                    "leadership_assessment": result.get("leadership_assessment"),
+                    "predictive_score": result.get("predictive_score"),
+                }
+                survey.status = "analyzed"
+                await db.commit()
+                return {"success": True, "score": survey.total_score}
+    except Exception as e:
+        logger.error(f"Proactive analysis failed: {e}")
+
+    raise HTTPException(status_code=500, detail="Анализ не удался")
+
+
+@router.post("/proactive-surveys/{survey_id}/approve")
+async def approve_proactive(
+    survey_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Approve proactive candidate — notify via Telegram."""
+    if current_user.role != UserRole.HR:
+        raise HTTPException(status_code=403, detail="HR only")
+    survey = (await db.execute(select(ProactiveSurvey).where(ProactiveSurvey.id == survey_id))).scalar_one_or_none()
+    if not survey:
+        raise HTTPException(status_code=404, detail="Not found")
+    survey.status = "approved"
+    await db.commit()
+
+    # Notify via Telegram bot
+    try:
+        bot_token = "8657277109:AAGPSvKgPIhRd6yd2MwDlmRAtksXSfguHN8"
+        msg = (
+            f"🎉 Поздравляем, {survey.name}!\n\n"
+            f"Координатор отбора inVision U одобрил вашу мини-анкету!\n"
+            f"Ваш балл: {survey.total_score}/100\n\n"
+            f"Теперь вы можете подать полную заявку на программу:\n"
+            f"👉 http://localhost:3000/auth\n\n"
+            f"Зарегистрируйтесь и выберите программу. Удачи!"
+        )
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            await client.post(
+                f"https://api.telegram.org/bot{bot_token}/sendMessage",
+                json={"chat_id": survey.telegram_id, "text": msg},
+            )
+    except Exception as e:
+        logger.warning(f"Failed to notify via Telegram: {e}")
+
+    return {"success": True}
+
+
+@router.post("/proactive-surveys/{survey_id}/reject")
+async def reject_proactive(
+    survey_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Reject proactive candidate — remove from list."""
+    if current_user.role != UserRole.HR:
+        raise HTTPException(status_code=403, detail="HR only")
+    survey = (await db.execute(select(ProactiveSurvey).where(ProactiveSurvey.id == survey_id))).scalar_one_or_none()
+    if not survey:
+        raise HTTPException(status_code=404, detail="Not found")
+    survey.status = "rejected"
+    await db.commit()
+    return {"success": True}
+
+
+@router.get("/proactive-surveys")
+async def list_proactive_surveys(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """List proactive survey results for HR."""
+    if current_user.role != UserRole.HR:
+        raise HTTPException(status_code=403, detail="HR only")
+
+    result = await db.execute(
+        select(ProactiveSurvey).order_by(ProactiveSurvey.total_score.desc())
+    )
+    surveys = result.scalars().all()
+
+    return [
+        {
+            "id": s.id,
+            "name": s.name,
+            "phone": s.phone,
+            "telegram_username": s.telegram_username,
+            "total_score": s.total_score,
+            "status": s.status,
+            "analysis": s.analysis,
+            "answers": s.answers,
+            "created_at": s.created_at.isoformat() if s.created_at else None,
+        }
+        for s in surveys
+    ]

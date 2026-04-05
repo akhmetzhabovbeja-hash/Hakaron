@@ -55,7 +55,7 @@ export default function ManagerCandidateDetailPage() {
     <div className="max-w-4xl mx-auto">
       <Link
         to="/manager"
-        className="text-primary-600 hover:underline text-sm"
+        className="text-gray-400 hover:text-dark text-sm transition"
       >
         &larr; Назад к списку
       </Link>
@@ -74,7 +74,7 @@ export default function ManagerCandidateDetailPage() {
       </div>
 
       <div className="grid grid-cols-3 gap-6 mb-6">
-        <div className="bg-white rounded-xl shadow p-6 text-center">
+        <div className="border border-gray-100 rounded-2xl p-6 text-center">
           <div
             className={`text-4xl font-bold ${
               analysis.total_score >= 80
@@ -88,13 +88,13 @@ export default function ManagerCandidateDetailPage() {
           </div>
           <div className="text-gray-500 mt-1">Общий балл</div>
         </div>
-        <div className="bg-white rounded-xl shadow p-6 text-center">
-          <div className="text-4xl font-bold text-primary-600">
+        <div className="border border-gray-100 rounded-2xl p-6 text-center">
+          <div className="text-4xl font-bold text-dark">
             {Math.round(analysis.vacancy_match * 100)}%
           </div>
           <div className="text-gray-500 mt-1">Соответствие</div>
         </div>
-        <div className="bg-white rounded-xl shadow p-6 text-center">
+        <div className="border border-gray-100 rounded-2xl p-6 text-center">
           <div className="text-4xl font-bold text-purple-600">
             {analysis.growth_potential}
           </div>
@@ -106,7 +106,7 @@ export default function ManagerCandidateDetailPage() {
       <CategoryScores categoryScores={analysis.category_scores} />
 
       <div className="grid grid-cols-2 gap-6 mb-6">
-        <div className="bg-white rounded-xl shadow p-6">
+        <div className="border border-gray-100 rounded-2xl p-6">
           <h3 className="text-lg font-semibold text-green-700 mb-3">
             Сильные стороны
           </h3>
@@ -119,7 +119,7 @@ export default function ManagerCandidateDetailPage() {
             ))}
           </ul>
         </div>
-        <div className="bg-white rounded-xl shadow p-6">
+        <div className="border border-gray-100 rounded-2xl p-6">
           <h3 className="text-lg font-semibold text-red-700 mb-3">
             Зоны развития
           </h3>
@@ -134,20 +134,20 @@ export default function ManagerCandidateDetailPage() {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow p-6 mb-6">
+      <div className="border border-gray-100 rounded-2xl p-6 mb-6">
         <h3 className="text-lg font-semibold mb-3">AI-резюме</h3>
         <p className="text-gray-700">{analysis.summary}</p>
       </div>
 
       {/* Manager comment + actions */}
       {analysis.status === "sent_to_manager" && (
-        <div className="bg-white rounded-xl shadow p-6 mb-6">
+        <div className="border border-gray-100 rounded-2xl p-6 mb-6">
           <h3 className="text-lg font-semibold mb-3">Комментарий комиссии</h3>
           <textarea
             value={comment}
             onChange={(e) => setComment(e.target.value)}
             placeholder="Оставьте комментарий для HR и абитуриента (необязательно)..."
-            className="w-full border rounded-lg px-4 py-3 h-24 focus:ring-2 focus:ring-primary-500 mb-4"
+            className="w-full border rounded-lg px-4 py-3 h-24 focus:ring-2 focus:ring-dark mb-4"
           />
           <div className="flex gap-4">
             <button

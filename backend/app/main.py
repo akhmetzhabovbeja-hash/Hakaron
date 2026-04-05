@@ -64,9 +64,9 @@ async def lifespan(app: FastAPI):
         await conn.run_sync(Base.metadata.create_all)
     await seed_system_questions()
 
-    # Seed mock data (15 students, 3 programs)
-    from app.seed_mock import seed_mock_data
-    await seed_mock_data()
+    # Seed HR + Manager accounts only
+    from app.seed_staff import seed_staff
+    await seed_staff()
 
     yield
 

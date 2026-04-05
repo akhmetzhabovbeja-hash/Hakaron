@@ -5,6 +5,7 @@ from app.models.questionnaire import QuestionnaireResponse
 from app.models.analysis import CandidateAnalysis
 from app.models.question import Question
 from app.models.vacancy_question import VacancyQuestion
+from app.models.proactive import ProactiveSurvey
 
 __all__ = [
     "User",

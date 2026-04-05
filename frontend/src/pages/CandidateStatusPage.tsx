@@ -177,6 +177,29 @@ export default function CandidateStatusPage() {
           })}
         </div>
       )}
+
+      {/* Fairness — how evaluation works */}
+      <div className="border border-gray-100 rounded-2xl p-6 mt-10">
+        <h3 className="font-bold text-dark mb-3">Как работает оценка</h3>
+        <div className="space-y-3 text-sm text-gray-500">
+          <div className="flex items-start gap-3">
+            <span className="text-dark font-bold shrink-0">01</span>
+            <p>Ваши ответы оцениваются по 6 категориям: опыт, компетенции, мотивация, потенциал, лидерство и траектория роста</p>
+          </div>
+          <div className="flex items-start gap-3">
+            <span className="text-dark font-bold shrink-0">02</span>
+            <p>Оценка основана <strong>только</strong> на содержании ваших ответов. Мы не используем демографические данные, пол, возраст или место проживания</p>
+          </div>
+          <div className="flex items-start gap-3">
+            <span className="text-dark font-bold shrink-0">03</span>
+            <p>Автоматическая оценка — это рекомендация для комиссии. Финальное решение всегда принимает человек</p>
+          </div>
+          <div className="flex items-start gap-3">
+            <span className="text-dark font-bold shrink-0">04</span>
+            <p>Мы проверяем аутентичность ответов. Тексты скопированные из AI-генераторов снижают оценку</p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

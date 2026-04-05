@@ -19,6 +19,7 @@ const roleNav: Record<string, { to: string; label: string }[]> = {
     { to: "/hr", label: "Программы" },
     { to: "/hr/applications", label: "Заявки" },
     { to: "/hr/reports", label: "Отчёты" },
+    { to: "/hr/proactive", label: "Поиск талантов" },
     { to: "/hr/statistics", label: "Статистика" },
     { to: "/hr/approved", label: "Одобренные" },
   ],

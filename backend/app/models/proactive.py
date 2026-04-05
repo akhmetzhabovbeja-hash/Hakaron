@@ -1,6 +1,6 @@
 """Proactive talent search — survey responses from Telegram bot."""
 from datetime import datetime, timezone
-from sqlalchemy import Integer, Float, String, Text, DateTime, JSON
+from sqlalchemy import Integer, BigInteger, Float, String, Text, DateTime, JSON
 from sqlalchemy.orm import Mapped, mapped_column
 from app.core.database import Base
 
@@ -9,7 +9,7 @@ class ProactiveSurvey(Base):
     __tablename__ = "proactive_surveys"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    telegram_id: Mapped[int] = mapped_column(Integer, index=True)
+    telegram_id: Mapped[int] = mapped_column(BigInteger, index=True)
     telegram_username: Mapped[str] = mapped_column(String(255), default="")
     name: Mapped[str] = mapped_column(String(255))
     phone: Mapped[str] = mapped_column(String(50))

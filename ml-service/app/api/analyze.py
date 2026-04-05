@@ -82,6 +82,7 @@ class AnalyzeRequest(BaseModel):
     candidate_id: int
     vacancy_id: int
     answers: list[AnswerItem]
+    mode: str = "full"  # "full" for 21-question form, "mini" for 5-question telegram survey
 
 
 class AnalyzeResponse(BaseModel):
@@ -97,6 +98,47 @@ class AnalyzeResponse(BaseModel):
     growth_trajectory: str | None = None
     predictive_score: int | None = None
     predictive_summary: str | None = None
+
+
+MINI_SYSTEM_PROMPT = """Ты — AI-эксперт по предварительной оценке потенциальных кандидатов программы inVision U.
+
+Тебе дали 5 коротких ответов из Telegram-бота. Это мини-скрининг — ответы будут короткими (1-3 предложения), это НОРМАЛЬНО для формата Telegram.
+
+## Категории оценки (0-100):
+1. **Лидерство (leadership)** — вопрос 1: организовал ли что-то для других?
+2. **Мотивация (motivation)** — вопрос 2: зачем образование, что хочет изменить?
+3. **Траектория роста (growth_path)** — вопрос 3: чему научился за год?
+4. **Потенциал (potential)** — вопрос 4: идея проекта для сообщества
+5. **Опыт (experience)** — вопрос 5: рефлексия над провалом
+
+## Правила оценки для МИНИ-анкеты:
+- Даже короткий но содержательный ответ (1-2 предложения с деталями) = 40-70 баллов
+- Ответ с конкретным примером и цифрами = 60-90 баллов
+- Ответ-отписка без смысла ("не знаю", "1", точка) = 0-10 баллов
+- Ответ показывающий эгоизм без пользы для других = 10-30 баллов
+- НЕ ШТРАФУЙ за краткость — это Telegram, не эссе
+
+## Формат ответа (СТРОГО JSON):
+{
+  "total_score": число 0-100,
+  "category_scores": {
+    "leadership": {"score": число, "explanation": "на русском", "label": "Лидерство", "max": 100},
+    "motivation": {"score": число, "explanation": "на русском", "label": "Мотивация", "max": 100},
+    "growth_path": {"score": число, "explanation": "на русском", "label": "Траектория роста", "max": 100},
+    "potential": {"score": число, "explanation": "на русском", "label": "Потенциал", "max": 100},
+    "experience": {"score": число, "explanation": "на русском", "label": "Опыт", "max": 100}
+  },
+  "growth_potential": "A" или "B" или "C",
+  "strengths": ["сторона 1", "сторона 2"],
+  "weaknesses": ["зона 1", "зона 2"],
+  "leadership_assessment": "оценка лидерства 1-2 предложения",
+  "predictive_score": число 0-100,
+  "predictive_summary": "прогноз 1-2 предложения",
+  "summary": "общее резюме 2-3 предложения"
+}
+
+Отвечай ТОЛЬКО JSON.
+"""
 
 
 def _format_answers(answers: list[AnswerItem]) -> str:
@@ -136,6 +178,8 @@ def _parse_llm_response(text: str) -> dict:
 async def analyze_candidate(data: AnalyzeRequest):
     """Analyze candidate answers using Qwen3-8B via Ollama."""
 
+    is_mini = data.mode == "mini" or len(data.answers) <= 5
+    system = MINI_SYSTEM_PROMPT if is_mini else SYSTEM_PROMPT
     user_message = f"/no_think\nПроанализируй ответы абитуриента:\n\n{_format_answers(data.answers)}\n\nОТВЕТЬ СТРОГО JSON. Никакого markdown, никаких пояснений. Только JSON объект."
 
     try:
@@ -145,7 +189,7 @@ async def analyze_candidate(data: AnalyzeRequest):
                 json={
                     "model": MODEL_NAME,
                     "messages": [
-                        {"role": "system", "content": SYSTEM_PROMPT},
+                        {"role": "system", "content": system},
                         {"role": "user", "content": user_message},
                     ],
                     "stream": False,

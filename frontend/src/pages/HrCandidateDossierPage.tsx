@@ -20,6 +20,9 @@ export default function HrCandidateDossierPage() {
   const [dossier, setDossier] = useState<DossierData | null>(null);
   const [loading, setLoading] = useState(true);
   const [modalFlag, setModalFlag] = useState<any>(null);
+  const [showMessage, setShowMessage] = useState(false);
+  const [messageText, setMessageText] = useState("");
+  const [sending, setSending] = useState(false);
 
   useEffect(() => {
     apiClient.get(`/hr/candidates/${id}/dossier`).then((res) => setDossier(res.data)).catch(() => {}).finally(() => setLoading(false));
@@ -73,13 +76,59 @@ export default function HrCandidateDossierPage() {
 
       <div className="flex items-center justify-between mt-6 mb-8">
         <h1 className="text-3xl font-extrabold text-dark">Досье абитуриента</h1>
-        <button
-          onClick={() => downloadFile(`/hr/candidates/${id}/report-pdf`, `dossier_${id}.pdf`).catch(() => alert("Ошибка PDF"))}
-          className="bg-dark text-white px-6 py-2.5 rounded-full text-sm font-semibold hover:bg-gray-800 transition"
-        >
-          Скачать PDF
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => downloadFile(`/hr/candidates/${id}/report-pdf`, `dossier_${id}.pdf`).catch(() => alert("Ошибка PDF"))}
+            className="bg-dark text-white px-5 py-2.5 rounded-full text-sm font-semibold hover:bg-gray-800 transition"
+          >
+            PDF
+          </button>
+          <button
+            onClick={() => setShowMessage(true)}
+            className="bg-accent text-dark px-5 py-2.5 rounded-full text-sm font-semibold hover:bg-accent/80 transition"
+          >
+            Связаться
+          </button>
+        </div>
       </div>
+
+      {/* Send message modal */}
+      {showMessage && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowMessage(false)}>
+          <div className="bg-white rounded-2xl max-w-lg w-full p-8" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-xl font-extrabold text-dark mb-2">Связаться с абитуриентом</h3>
+            <p className="text-gray-400 text-sm mb-4">{dossier.name} получит уведомление в профиле и в Telegram</p>
+            <textarea
+              value={messageText}
+              onChange={(e) => setMessageText(e.target.value)}
+              placeholder="Напишите сообщение абитуриенту..."
+              className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 h-32 text-sm outline-none focus:ring-2 focus:ring-dark resize-y mb-4"
+            />
+            <div className="flex gap-3">
+              <button
+                onClick={async () => {
+                  if (!messageText.trim()) return;
+                  setSending(true);
+                  try {
+                    await apiClient.post(`/hr/candidates/${id}/send-message`, { message: messageText });
+                    setShowMessage(false);
+                    setMessageText("");
+                    alert("Сообщение отправлено!");
+                  } catch { alert("Ошибка отправки"); }
+                  finally { setSending(false); }
+                }}
+                disabled={sending || !messageText.trim()}
+                className="flex-1 bg-dark text-white py-3 rounded-xl font-semibold hover:bg-gray-800 transition disabled:opacity-50"
+              >
+                {sending ? "Отправка..." : "Отправить"}
+              </button>
+              <button onClick={() => setShowMessage(false)} className="px-6 py-3 text-gray-500 hover:text-dark transition">
+                Отмена
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* User Info */}
       <div className="border border-gray-100 rounded-2xl p-8 mb-8">

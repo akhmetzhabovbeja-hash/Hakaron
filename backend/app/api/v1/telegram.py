@@ -325,6 +325,7 @@ async def submit_survey(
                     "candidate_id": survey.id,
                     "vacancy_id": 0,
                     "answers": ml_answers,
+                    "mode": "mini",
                 },
             )
 
@@ -388,7 +389,7 @@ async def analyze_proactive_survey(
         async with httpx.AsyncClient(timeout=120.0) as client:
             resp = await client.post(
                 f"{ML_SERVICE_URL}/api/v1/analyze",
-                json={"candidate_id": survey.id, "vacancy_id": 0, "answers": ml_answers},
+                json={"candidate_id": survey.id, "vacancy_id": 0, "answers": ml_answers, "mode": "mini"},
             )
             if resp.status_code == 200:
                 result = resp.json()

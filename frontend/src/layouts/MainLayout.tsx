@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Outlet, Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
 
@@ -7,7 +8,7 @@ const roleLabels: Record<string, string> = {
   hr: "Координатор отбора",
 };
 
-const roleNav: Record<string, { to: string; label: string }[]> = {
+const roleNav: Record<string, { to: string; label: string; children?: { to: string; label: string }[] }[]> = {
   candidate: [
     { to: "/vacancies", label: "Программы" },
     { to: "/status", label: "Мой статус" },
@@ -17,13 +18,74 @@ const roleNav: Record<string, { to: string; label: string }[]> = {
   ],
   hr: [
     { to: "/hr", label: "Программы" },
-    { to: "/hr/applications", label: "Заявки" },
+    { to: "/hr/applications", label: "Заявки", children: [
+      { to: "/hr/applications", label: "Ожидание" },
+      { to: "/hr/applications/accepted", label: "Принятые" },
+    ]},
     { to: "/hr/reports", label: "Отчёты" },
     { to: "/hr/proactive", label: "Поиск талантов" },
     { to: "/hr/statistics", label: "Статистика" },
-    { to: "/hr/approved", label: "Одобренные" },
   ],
 };
+
+function NavBar({ items, pathname }: { items: any[]; pathname: string }) {
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+
+  return (
+    <nav className="hidden md:flex items-center gap-1">
+      {items.map((item: any) => {
+        const active = pathname === item.to || (item.to !== "/" && pathname.startsWith(item.to));
+
+        if (item.children) {
+          const childActive = item.children.some((c: any) => pathname === c.to);
+          return (
+            <div key={item.to} className="relative">
+              <button
+                onClick={() => setOpenDropdown(openDropdown === item.to ? null : item.to)}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors flex items-center gap-1 ${
+                  active || childActive ? "bg-dark text-white" : "text-gray-600 hover:text-dark hover:bg-gray-50"
+                }`}
+              >
+                {item.label}
+                <svg className={`w-3 h-3 transition-transform ${openDropdown === item.to ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              {openDropdown === item.to && (
+                <div className="absolute top-full left-0 mt-1 bg-white border border-gray-100 rounded-xl shadow-lg py-1 min-w-[160px] z-50">
+                  {item.children.map((child: any) => (
+                    <Link
+                      key={child.to}
+                      to={child.to}
+                      onClick={() => setOpenDropdown(null)}
+                      className={`block px-4 py-2.5 text-sm transition-colors ${
+                        pathname === child.to ? "text-dark font-semibold bg-gray-50" : "text-gray-600 hover:text-dark hover:bg-gray-50"
+                      }`}
+                    >
+                      {child.label}
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        }
+
+        return (
+          <Link
+            key={item.to}
+            to={item.to}
+            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+              active ? "bg-dark text-white" : "text-gray-600 hover:text-dark hover:bg-gray-50"
+            }`}
+          >
+            {item.label}
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
 
 export default function MainLayout() {
   const { user, isAuthenticated, logout } = useAuthStore();
@@ -39,7 +101,7 @@ export default function MainLayout() {
     <div className="min-h-screen bg-white">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-white border-b border-gray-100">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+        <div className="mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-10">
             <Link to="/" className="flex items-center gap-2">
               <span className="text-xl font-extrabold tracking-tight text-dark">
@@ -51,25 +113,7 @@ export default function MainLayout() {
             </Link>
 
             {isAuthenticated && user && (
-              <nav className="hidden md:flex items-center gap-1">
-                {(roleNav[user.role] || []).map((item) => {
-                  const active = location.pathname === item.to ||
-                    (item.to !== "/" && location.pathname.startsWith(item.to));
-                  return (
-                    <Link
-                      key={item.to}
-                      to={item.to}
-                      className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                        active
-                          ? "bg-dark text-white"
-                          : "text-gray-600 hover:text-dark hover:bg-gray-50"
-                      }`}
-                    >
-                      {item.label}
-                    </Link>
-                  );
-                })}
-              </nav>
+              <NavBar items={roleNav[user.role] || []} pathname={location.pathname} />
             )}
           </div>
 

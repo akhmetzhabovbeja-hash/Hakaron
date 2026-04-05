@@ -1047,6 +1047,59 @@ class AiDetectRequest(PydanticBaseModel):
     text: str
 
 
+class SendMessageRequest(PydanticBaseModel):
+    message: str
+
+
+@router.post("/candidates/{analysis_id}/send-message")
+async def send_message_to_candidate(
+    analysis_id: int,
+    body: SendMessageRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Send a message/notification to candidate from HR."""
+    _require_hr(current_user)
+
+    result = await db.execute(
+        select(CandidateAnalysis, CandidateProfile)
+        .join(CandidateProfile, CandidateAnalysis.candidate_id == CandidateProfile.id)
+        .where(CandidateAnalysis.id == analysis_id)
+    )
+    row = result.one_or_none()
+    if not row:
+        raise HTTPException(status_code=404, detail="Not found")
+
+    analysis, profile = row
+    if not profile.user_id:
+        raise HTTPException(status_code=400, detail="Candidate has no account")
+
+    from app.models.notification import Notification
+    notif = Notification(
+        user_id=profile.user_id,
+        from_user_id=current_user.id,
+        title="Сообщение от координатора отбора",
+        message=body.message,
+    )
+    db.add(notif)
+    await db.commit()
+
+    # Also send via Telegram if linked
+    user = (await db.execute(select(User).where(User.id == profile.user_id))).scalar_one_or_none()
+    if user and user.telegram_id:
+        try:
+            bot_token = "8657277109:AAGPSvKgPIhRd6yd2MwDlmRAtksXSfguHN8"
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                await client.post(
+                    f"https://api.telegram.org/bot{bot_token}/sendMessage",
+                    json={"chat_id": user.telegram_id, "text": f"📩 Сообщение от координатора отбора:\n\n{body.message}"},
+                )
+        except Exception:
+            pass
+
+    return {"success": True}
+
+
 @router.post("/ai-detect")
 async def ai_detect_text(
     body: AiDetectRequest,

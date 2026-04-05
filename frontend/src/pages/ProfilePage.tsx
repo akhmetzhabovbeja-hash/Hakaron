@@ -102,6 +102,9 @@ export default function ProfilePage() {
     <div className="max-w-2xl mx-auto">
       <h2 className="text-3xl font-bold mb-8">Профиль</h2>
 
+      {/* Notifications */}
+      <ProfileNotifications />
+
       {/* Avatar section */}
       <div className="bg-white rounded-xl shadow p-6 mb-6 flex items-center gap-6">
         <div className="relative">
@@ -288,6 +291,33 @@ function TelegramLink() {
           )}
         </>
       )}
+    </div>
+  );
+}
+
+function ProfileNotifications() {
+  const [notifs, setNotifs] = useState<{ id: number; title: string; message: string; created_at: string }[]>([]);
+
+  useEffect(() => {
+    apiClient.get("/profile/notifications").then(({ data }) => setNotifs(data)).catch(() => {});
+  }, []);
+
+  if (notifs.length === 0) return null;
+
+  return (
+    <div className="mb-8">
+      <h3 className="font-bold text-dark mb-3">Уведомления</h3>
+      <div className="space-y-3">
+        {notifs.map((n) => (
+          <div key={n.id} className="border border-accent/30 bg-accent/5 rounded-2xl p-5">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-sm font-bold text-dark">{n.title}</span>
+              <span className="text-xs text-gray-400">{new Date(n.created_at).toLocaleDateString("ru-RU")}</span>
+            </div>
+            <p className="text-sm text-gray-700">{n.message}</p>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

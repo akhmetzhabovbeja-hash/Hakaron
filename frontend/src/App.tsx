@@ -22,6 +22,7 @@ import HrReportVacancyCandidatesPage from "./pages/HrReportVacancyCandidatesPage
 import HrReportCandidateAnalysisPage from "./pages/HrReportCandidateAnalysisPage";
 import HrCandidateDossierPage from "./pages/HrCandidateDossierPage";
 import HrApplicationsPage from "./pages/HrApplicationsPage";
+import HrAcceptedPage from "./pages/HrAcceptedPage";
 import HrStatisticsPage from "./pages/HrStatisticsPage";
 import HrProactivePage from "./pages/HrProactivePage";
 import HrAiDetectPage from "./pages/HrAiDetectPage";
@@ -159,6 +160,14 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={["hr"]}>
               <HrApplicationsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="hr/applications/accepted"
+          element={
+            <ProtectedRoute allowedRoles={["hr"]}>
+              <HrAcceptedPage />
             </ProtectedRoute>
           }
         />
